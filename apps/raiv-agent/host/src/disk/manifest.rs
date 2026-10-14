@@ -8,7 +8,6 @@ use std::{
     fmt,
     io::{self, Write},
     os::fd::AsRawFd,
-    sync::atomic::Ordering,
 };
 #[cfg(test)]
 mod tests;
@@ -165,9 +164,8 @@ impl<'a> ManifestFile<'a> {
         if current.as_deref() != expected {
             return Err(ManifestError::Conflict);
         }
-        let nonce = NEXT_TEMP
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
-            .map_err(|_| before(DiskError::OriginExhausted))?;
+        let nonce =
+            crate::atomic::next_u64(&NEXT_TEMP).map_err(|_| before(DiskError::OriginExhausted))?;
         let temp = CString::new(format!(".raiv-manifest-{}-{nonce}", std::process::id()))
             .expect("numeric internal filename");
         let mut file = self

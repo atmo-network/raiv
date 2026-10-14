@@ -15,7 +15,7 @@ use std::{
         unix::fs::OpenOptionsExt,
     },
     path::Path,
-    sync::atomic::{AtomicU64, Ordering},
+    sync::atomic::AtomicU64,
 };
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(1);
 pub mod manifest;
@@ -98,9 +98,7 @@ impl DiskBlockStore {
             Err(DiskError::Io(e)) if e.kind() == io::ErrorKind::NotFound => {}
             Err(e) => return Err(e),
         }
-        let nonce = NEXT_TEMP
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
-            .map_err(|_| DiskError::OriginExhausted)?;
+        let nonce = crate::atomic::next_u64(&NEXT_TEMP).map_err(|_| DiskError::OriginExhausted)?;
         let temp = CString::new(format!(".raiv-block-{}-{nonce}", std::process::id()))
             .expect("numeric generated filename");
         // create_new equivalent: never truncate an orphan or follow a symlink.

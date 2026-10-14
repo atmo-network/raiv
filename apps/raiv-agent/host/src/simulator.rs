@@ -16,10 +16,7 @@ use raiv::{
     receipt::{Receipt, ReceiptError, ReceiptView},
     state::Continuation,
 };
-use std::{
-    fmt,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use std::{fmt, sync::atomic::AtomicU64};
 static NEXT_BOOK: AtomicU64 = AtomicU64::new(1);
 pub mod checkpoint;
 pub mod local;
@@ -138,9 +135,8 @@ impl ExecutorBook {
         if capacity == 0 {
             return Err(SimulatorError::Capacity);
         }
-        let origin = NEXT_BOOK
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
-            .map_err(|_| SimulatorError::OriginExhausted)?;
+        let origin =
+            crate::atomic::next_u64(&NEXT_BOOK).map_err(|_| SimulatorError::OriginExhausted)?;
         Ok(Self {
             origin,
             capacity,

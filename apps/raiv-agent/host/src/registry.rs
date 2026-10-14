@@ -9,10 +9,7 @@ use raiv::{
     preparation::PreparedInput,
     state::Continuation,
 };
-use std::{
-    fmt,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use std::{fmt, sync::atomic::AtomicU64};
 static NEXT_REGISTRY: AtomicU64 = AtomicU64::new(1);
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Anchor {
@@ -109,9 +106,8 @@ impl Registry {
         if capacity == 0 {
             return Err(RegistryError::InvalidCapacity);
         }
-        let origin = NEXT_REGISTRY
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
-            .map_err(|_| RegistryError::OriginExhausted)?;
+        let origin =
+            crate::atomic::next_u64(&NEXT_REGISTRY).map_err(|_| RegistryError::OriginExhausted)?;
         Ok(Self {
             origin,
             agents: Vec::new(),

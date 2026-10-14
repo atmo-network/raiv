@@ -2,6 +2,7 @@
 use core::fmt;
 pub mod acceptance;
 pub mod admission;
+mod atomic;
 pub mod candidate;
 pub mod checkpoint;
 #[cfg(target_os = "linux")]

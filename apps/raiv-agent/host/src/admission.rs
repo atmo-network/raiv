@@ -11,10 +11,7 @@ use raiv::{
     preparation::{InputBinding, PreparedInput},
     state::Continuation,
 };
-use std::{
-    fmt,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use std::{fmt, sync::atomic::AtomicU64};
 static NEXT_BOOK: AtomicU64 = AtomicU64::new(1);
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AdmissionStatus {
@@ -119,9 +116,8 @@ impl AdmissionBook {
         if capacity == 0 {
             return Err(AdmissionError::InvalidCapacity);
         }
-        let origin = NEXT_BOOK
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
-            .map_err(|_| AdmissionError::OriginExhausted)?;
+        let origin =
+            crate::atomic::next_u64(&NEXT_BOOK).map_err(|_| AdmissionError::OriginExhausted)?;
         Ok(Self {
             origin,
             capacity,

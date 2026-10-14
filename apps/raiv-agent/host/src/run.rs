@@ -9,10 +9,7 @@ use raiv::{
     graph::RestoredAgent,
     preparation::{InputBinding, PreparedInput},
 };
-use std::{
-    fmt,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use std::{fmt, sync::atomic::AtomicU64};
 mod wire;
 static NEXT_ORIGIN: AtomicU64 = AtomicU64::new(1);
 /// Explicit integration-supplied program pin. Construction is NOT registry approval.
@@ -138,9 +135,8 @@ impl<'a> Run<'a> {
         check_binding(wasm, program, source, packet)?;
         let input = wire::activate(source, packet)?;
         let vm = GuestVm::new(wasm, limits).map_err(RunError::Bridge)?;
-        let origin = NEXT_ORIGIN
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
-            .map_err(|_| RunError::OriginExhausted)?;
+        let origin =
+            crate::atomic::next_u64(&NEXT_ORIGIN).map_err(|_| RunError::OriginExhausted)?;
         let mut run = Self {
             vm: Some(vm),
             origin,

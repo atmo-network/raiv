@@ -7,7 +7,7 @@ use std::{
 pub(crate) struct Directory(pub PathBuf);
 impl Directory {
     pub(crate) fn new() -> Self {
-        let nonce = NEXT_TEMP.fetch_add(1, Ordering::Relaxed);
+        let nonce = NEXT_TEMP.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let path =
             std::env::temp_dir().join(format!("raiv-disk-test-{}-{nonce}", std::process::id()));
         fs::create_dir(&path).unwrap();
