@@ -1,0 +1,57 @@
+# NEW live-demo init/status/init-world/world-status and bounded HTTPS wake/resume.
+# Live wake/resume omit --replies; scripted reply flags are explicitly refused.
+# Interactive TTY command also requires independent pins and a finite grants plan.
+# Current no-tool Finish profiles have native/WASM and bounded fresh Go/high live evidence.
+# No credentials/HTTP at bootstrap or status. api_key_env is a NAME, never a key value.
+# Create independent operator-owned directories and replace the zero module pin with
+# the SHA-256 of the exact independently approved freshly built live-profile guest.
+# Changing endpoint/model/mandate means a different Definition; never rebind old storage.
+schema_version = 1
+state_format = "raiv-state/1"
+
+[agent]
+profile = "survivor" # "veto" disables Memory
+id = "b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0"
+mandate = "Assist the native operator. Preserve relevant behavioral continuity in sparse Memory and explicitly finish each request."
+
+[execution]
+adapter = "local-trusted"
+
+[runtime]
+guest_module = "../../target/wasm32v1-none/release/raiv_agent.wasm"
+module_digest = "0000000000000000000000000000000000000000000000000000000000000000"
+
+[inference]
+protocol = "openai-chat-completions"
+base_url = "https://opencode.ai/zen/go/v1"
+model = "deepseek-v4.1-flash"
+# Optional: reasoning_effort = "low" or "high"; absent preserves disabled profile bytes.
+# Changing effort requires a NEW explicitly approved Definition/module/namespace, not rebind.
+# For NEW demos reasoning_effort = "high" selects the supported reasoning contract before init.
+# Prior live Go/high evidence belongs to old pins. No old source is migrated/rebound.
+# Reasoning is bounded native RAM only; every fresh live run requires independent approval.
+api_key_env = "OPENCODE_API_KEY"
+stream = true
+max_tokens = 1024
+max_request_bytes = 262144
+max_response_bytes = 1048576
+max_header_bytes = 16384
+timeout_ms = 60000
+max_stream_event_bytes = 65536
+max_stream_events = 4096
+
+[storage]
+adapter = "disk"
+directory = "./var/live-blocks"
+
+[acceptance]
+adapter = "local"
+
+# Independent SYNTHETIC unit world, not authenticated provider costs or real effects.
+# Provision explicitly before the first live wake. No automatic real effects.
+[executor]
+adapter = "scripted-unit-world"
+directory = "./var/live-world"
+world_id = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+virtual_units = "10"
+capacity = 16

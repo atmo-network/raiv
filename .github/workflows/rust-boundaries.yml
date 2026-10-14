@@ -1,0 +1,99 @@
+name: Rust boundary checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  core:
+    name: Core / ${{ matrix.rust }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: ["1.85.0", stable]
+    env:
+      RUST_TOOLCHAIN: ${{ matrix.rust }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - name: Install Core toolchain and portable targets
+        run: |
+          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal --component clippy,rustfmt
+          rustup target add --toolchain "$RUST_TOOLCHAIN" wasm32-unknown-unknown thumbv7em-none-eabi
+      - name: Core tests, lint, formatting and no_std builds
+        run: |
+          cargo +"$RUST_TOOLCHAIN" test --locked -p raiv
+          cargo +"$RUST_TOOLCHAIN" clippy --locked -p raiv --all-targets -- -D warnings
+          cargo +"$RUST_TOOLCHAIN" fmt --all --check
+          cargo +"$RUST_TOOLCHAIN" check --locked -p raiv --lib --target wasm32-unknown-unknown
+          cargo +"$RUST_TOOLCHAIN" check --locked -p raiv --lib --target thumbv7em-none-eabi
+      - name: Exact lifecycle fixture regeneration
+        run: |
+          mkdir -p target
+          python3 fixtures/generate_profiles.py --check
+          python3 fixtures/generate_demo_scenario.py --check
+          python3 fixtures/generate_lifecycle.py > target/ci-lifecycle.json
+          cmp fixtures/format/lifecycle.json target/ci-lifecycle.json
+      - name: Feature and complete dependency graph evidence
+        run: |
+          cargo +"$RUST_TOOLCHAIN" tree --locked -p raiv --target wasm32-unknown-unknown -e features --edges normal,build
+          cargo +"$RUST_TOOLCHAIN" tree --locked --workspace --target all --edges normal,build,dev --prefix none | tee target/ci-dependencies.txt
+          if grep -Ei '^([^ ]*ipld[^ ]*|cid(-[^ ]*)?) v' target/ci-dependencies.txt; then
+            echo 'IPLD/CID dependency violates the fixed private profile contract' >&2
+            exit 1
+          fi
+
+  host:
+    name: Host ${{ matrix.host }} / guest ${{ matrix.guest }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: "1.86.0"
+            guest: "1.85.0"
+          - host: stable
+            guest: stable
+    env:
+      HOST_TOOLCHAIN: ${{ matrix.host }}
+      GUEST_TOOLCHAIN: ${{ matrix.guest }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - name: Install host and guest toolchains
+        run: |
+          rustup toolchain install "$HOST_TOOLCHAIN" --profile minimal --component clippy,rustfmt
+          if [ "$GUEST_TOOLCHAIN" != "$HOST_TOOLCHAIN" ]; then
+            rustup toolchain install "$GUEST_TOOLCHAIN" --profile minimal --component clippy,rustfmt
+          fi
+          rustup target add --toolchain "$GUEST_TOOLCHAIN" wasm32v1-none thumbv7em-none-eabi
+      - name: Host lint and guest portable builds
+        run: |
+          cargo +"$HOST_TOOLCHAIN" clippy --locked -p raiv-agent-host --all-targets -- -D warnings
+          cargo +"$HOST_TOOLCHAIN" fmt --all --check
+          cargo +"$GUEST_TOOLCHAIN" clippy --locked -p raiv-agent-guest --lib --target wasm32v1-none -- -D warnings
+          cargo +"$GUEST_TOOLCHAIN" check --locked -p raiv-agent-guest --lib --target thumbv7em-none-eabi
+          cargo +"$GUEST_TOOLCHAIN" tree --locked -p raiv-agent-guest --target wasm32v1-none -e features --edges normal,build
+      - name: Build exact import-free Rust guest artifact
+        run: |
+          cargo +"$GUEST_TOOLCHAIN" rustc --locked -p raiv-agent-guest --lib --crate-type cdylib --target wasm32v1-none --release -- -C panic=abort
+          wc -c target/wasm32v1-none/release/raiv_agent.wasm
+          sha256sum target/wasm32v1-none/release/raiv_agent.wasm
+      - name: Native, actual Wasmi and isolated process suites
+        run: |
+          mkdir -p target/raiv-ci-tmp
+          stat -f -c '%T' target/raiv-ci-tmp
+          TMPDIR="$PWD/target/raiv-ci-tmp" \
+            RAIV_GUEST_WASM="$PWD/target/wasm32v1-none/release/raiv_agent.wasm" \
+            sh apps/raiv-agent/test-host.sh "$HOST_TOOLCHAIN"

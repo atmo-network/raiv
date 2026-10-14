@@ -1,0 +1,38 @@
+[
+  {
+    "name": "empty-memory",
+    "record": {
+      "kind": "memory",
+      "value": {},
+      "version": 1
+    },
+    "hex": "a3646b696e64666d656d6f72796576616c7565a06776657273696f6e01",
+    "cid": "bafyreifg4eef2j33kx4epxkh72suj2lyamprn67hgksobxzvpxrqma5mtm"
+  },
+  {
+    "name": "populated-memory",
+    "record": {
+      "kind": "memory",
+      "value": {
+        "intents": {
+          "next": "trade"
+        },
+        "strategy": {
+          "rule": "retry"
+        },
+        "tactics": {
+          "retry_delay": 1,
+          "steps": [
+            {},
+            {
+              "action": "observe"
+            }
+          ]
+        }
+      },
+      "version": 1
+    },
+    "hex": "a3646b696e64666d656d6f72796576616c7565a367696e74656e7473a1646e6578746574726164656774616374696373a265737465707382a0a166616374696f6e676f6273657276656b72657472795f64656c617901687374726174656779a16472756c656572657472796776657273696f6e01",
+    "cid": "bafyreif5zfzwh7wz3z4xi6wnmocjxnedenro7aaonjgcse7wzodyu27sdu"
+  }
+]

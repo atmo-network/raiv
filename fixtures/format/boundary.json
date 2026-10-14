@@ -1,0 +1,134 @@
+[
+  {
+    "name": "await-action-no-memory",
+    "record": {
+      "exit": {
+        "tag": "await_action",
+        "command": {
+          "tool_id": "trade",
+          "action_id": {
+            "$bytes": "1010101010101010101010101010101010101010101010101010101010101010"
+          },
+          "arguments": {
+            "asset": "SIM",
+            "amount": "7"
+          },
+          "tool_version": 1,
+          "authority_binding": {
+            "$bytes": "2020202020202020202020202020202020202020202020202020202020202020"
+          }
+        }
+      },
+      "kind": "boundary",
+      "input": {
+        "$link": "bafyreidcetyaovtgait6iq2nvljjavo3dxc6idi25bw2scf7rbqcctmuyu"
+      },
+      "usage": {
+        "model_calls": 1,
+        "billed_units": null,
+        "input_tokens": null,
+        "output_tokens": null,
+        "local_tool_calls": 2
+      },
+      "memory": null,
+      "ordinal": 0,
+      "version": 1
+    },
+    "hex": "a76465786974a2637461676c61776169745f616374696f6e67636f6d6d616e64a567746f6f6c5f696465747261646569616374696f6e5f69645820101010101010101010101010101010101010101010101010101010101010101069617267756d656e7473a26561737365746353494d66616d6f756e7461376c746f6f6c5f76657273696f6e0171617574686f726974795f62696e64696e6758202020202020202020202020202020202020202020202020202020202020202020646b696e6468626f756e6461727965696e707574d82a582500017112206224f00756660227e4434daad29055db1dc5e40d1ae86da908bf8860214d94c5657573616765a56b6d6f64656c5f63616c6c73016c62696c6c65645f756e697473f66c696e7075745f746f6b656e73f66d6f75747075745f746f6b656e73f6706c6f63616c5f746f6f6c5f63616c6c7302666d656d6f7279f6676f7264696e616c006776657273696f6e01",
+    "sha256": "77c5c5fb37c295d3fb38724e8f4fa516f309f8f41b096be8c85a259957b2c9c8",
+    "cid": "bafyreidxyxc7wn6csxj7wodsj2hu7jiw6me7r5a3bfv6rsc2ewmvpmwjza"
+  },
+  {
+    "name": "await-action-memory-full-u64",
+    "record": {
+      "exit": {
+        "tag": "await_action",
+        "command": {
+          "tool_id": "trade",
+          "action_id": {
+            "$bytes": "1010101010101010101010101010101010101010101010101010101010101010"
+          },
+          "arguments": {
+            "asset": "SIM",
+            "amount": "7"
+          },
+          "tool_version": 18446744073709551615,
+          "authority_binding": {
+            "$bytes": "2020202020202020202020202020202020202020202020202020202020202020"
+          }
+        }
+      },
+      "kind": "boundary",
+      "input": {
+        "$link": "bafyreidcetyaovtgait6iq2nvljjavo3dxc6idi25bw2scf7rbqcctmuyu"
+      },
+      "usage": {
+        "model_calls": 0,
+        "billed_units": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "local_tool_calls": 0
+      },
+      "memory": {
+        "$link": "bafyreifg4eef2j33kx4epxkh72suj2lyamprn67hgksobxzvpxrqma5mtm"
+      },
+      "ordinal": 18446744073709551615,
+      "version": 1
+    },
+    "hex": "a76465786974a2637461676c61776169745f616374696f6e67636f6d6d616e64a567746f6f6c5f696465747261646569616374696f6e5f69645820101010101010101010101010101010101010101010101010101010101010101069617267756d656e7473a26561737365746353494d66616d6f756e7461376c746f6f6c5f76657273696f6e1bffffffffffffffff71617574686f726974795f62696e64696e6758202020202020202020202020202020202020202020202020202020202020202020646b696e6468626f756e6461727965696e707574d82a582500017112206224f00756660227e4434daad29055db1dc5e40d1ae86da908bf8860214d94c5657573616765a56b6d6f64656c5f63616c6c73006c62696c6c65645f756e697473006c696e7075745f746f6b656e73006d6f75747075745f746f6b656e7300706c6f63616c5f746f6f6c5f63616c6c7300666d656d6f7279d82a58250001711220a6e1085d277b55f847dd47fea544e978031f16fbe732a4e0df357de30603ac9b676f7264696e616c1bffffffffffffffff6776657273696f6e01",
+    "sha256": "5b4b0c96bc7b2998bcc75d4d5dd7a920c4004ec69472289301d1e4634ba84773",
+    "cid": "bafyreic3jmgjnpd3fgmlzr25jvo5pkjayqae5ruuoiujgaor4rruxkchom"
+  },
+  {
+    "name": "await-actor-memory",
+    "record": {
+      "exit": {
+        "tag": "await_actor"
+      },
+      "kind": "boundary",
+      "input": {
+        "$link": "bafyreibw4o5apzhkm7kojsg5vake2y5r3nvdisjhtu7zgefr74sjj2w46e"
+      },
+      "usage": {
+        "model_calls": 3,
+        "billed_units": 23,
+        "input_tokens": null,
+        "output_tokens": 17,
+        "local_tool_calls": 4
+      },
+      "memory": {
+        "$link": "bafyreifg4eef2j33kx4epxkh72suj2lyamprn67hgksobxzvpxrqma5mtm"
+      },
+      "ordinal": 2,
+      "version": 1
+    },
+    "hex": "a76465786974a1637461676b61776169745f6163746f72646b696e6468626f756e6461727965696e707574d82a5825000171122036e3ba07e4ea67d4e4c8dda8144d63b1db6a3449279d3f9310b1ff2494eadcf1657573616765a56b6d6f64656c5f63616c6c73036c62696c6c65645f756e697473176c696e7075745f746f6b656e73f66d6f75747075745f746f6b656e7311706c6f63616c5f746f6f6c5f63616c6c7304666d656d6f7279d82a58250001711220a6e1085d277b55f847dd47fea544e978031f16fbe732a4e0df357de30603ac9b676f7264696e616c026776657273696f6e01",
+    "sha256": "035eea8f72dbb776b21e19bef899f19ae27e1803884f248cff428f08ce19961f",
+    "cid": "bafyreiadl3vi64w3w53lehqzx34jt4m24j7bqa4ij4siz72cr4em4gmwd4"
+  },
+  {
+    "name": "await-actor-no-memory-full-u64",
+    "record": {
+      "exit": {
+        "tag": "await_actor"
+      },
+      "kind": "boundary",
+      "input": {
+        "$link": "bafyreibw4o5apzhkm7kojsg5vake2y5r3nvdisjhtu7zgefr74sjj2w46e"
+      },
+      "usage": {
+        "model_calls": 18446744073709551615,
+        "billed_units": 18446744073709551615,
+        "input_tokens": 18446744073709551615,
+        "output_tokens": 18446744073709551615,
+        "local_tool_calls": 18446744073709551615
+      },
+      "memory": null,
+      "ordinal": 18446744073709551615,
+      "version": 1
+    },
+    "hex": "a76465786974a1637461676b61776169745f6163746f72646b696e6468626f756e6461727965696e707574d82a5825000171122036e3ba07e4ea67d4e4c8dda8144d63b1db6a3449279d3f9310b1ff2494eadcf1657573616765a56b6d6f64656c5f63616c6c731bffffffffffffffff6c62696c6c65645f756e6974731bffffffffffffffff6c696e7075745f746f6b656e731bffffffffffffffff6d6f75747075745f746f6b656e731bffffffffffffffff706c6f63616c5f746f6f6c5f63616c6c731bffffffffffffffff666d656d6f7279f6676f7264696e616c1bffffffffffffffff6776657273696f6e01",
+    "sha256": "91eb891d9b31de26c5e09aba08ba652b8d6277d986bd7efadbd664cdae66cbf5",
+    "cid": "bafyreier5oer3gzr3ytmlye2xieluzjlrvrhpwmgxv7pvw6wmtg24zwl6u"
+  }
+]

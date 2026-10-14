@@ -1,0 +1,20 @@
+[package]
+name = "raiv"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.85"
+description = "Bounded reproducible checkpoints for agent behavioral continuity."
+license = "Unlicense"
+repository = "https://github.com/atmo-network/raiv"
+readme = "README.md"
+keywords = ["agent", "checkpoint", "no-std"]
+categories = ["no-std", "data-structures"]
+
+[dependencies]
+data-encoding = { version = "=2.11.1", default-features = false }
+minicbor = { version = "=2.3.0", default-features = false }
+sha2 = { version = "=0.11.0", default-features = false }
+
+[dev-dependencies]
+ciborium = { version = "=0.2.2", default-features = false }
+serde_json = "=1.0.152"

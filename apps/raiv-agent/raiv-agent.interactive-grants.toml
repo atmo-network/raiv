@@ -1,0 +1,9 @@
+# Invocation is explicit LOCAL TEST administrator approval of a finite per-event plan.
+# Enter approves each fresh ActorWake under these bounds; IDs come from native Linux randomness.
+# Not real provider prices, lifetime funding or external Actor authentication.
+# This count is per interactive invocation; reopening requires a new explicit operator approval.
+activation_units = "100"
+remaining_episode_units = "100"
+remaining_model_calls = "16"
+remaining_actions = "4"
+max_events = "4"

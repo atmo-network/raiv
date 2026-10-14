@@ -1,12 +1,4 @@
-[package]
-name = "raiv"
-version = "0.0.0"
-edition = "2021"
-description = "Placeholder crate reserving the name for future development."
-license = "Unlicense"
-repository = "https://github.com/atmo-network/raiv"
-readme = "README.md"
-keywords = ["placeholder"]
-categories = []
-
-[dependencies]
+[workspace]
+members = ["lib", "apps/raiv-agent/guest", "apps/raiv-agent/host"]
+default-members = ["lib"]
+resolver = "2"

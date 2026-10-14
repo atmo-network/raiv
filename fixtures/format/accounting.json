@@ -1,0 +1,96 @@
+{
+  "admissions": [
+    {
+      "name": "distinct",
+      "record": {
+        "activation_units": 1,
+        "remaining_episode_units": 2,
+        "remaining_model_calls": 3,
+        "remaining_actions": 4,
+        "admission_id": {
+          "$bytes": "5050505050505050505050505050505050505050505050505050505050505050"
+        }
+      },
+      "hex": "a56c61646d697373696f6e5f6964582050505050505050505050505050505050505050505050505050505050505050507061637469766174696f6e5f756e697473017172656d61696e696e675f616374696f6e73047572656d61696e696e675f6d6f64656c5f63616c6c73037772656d61696e696e675f657069736f64655f756e69747302",
+      "sha256": "a8b94228cc29e8f506e68068fdb6c2b53c2e075b838879a0ba22795126c0b7e1"
+    },
+    {
+      "name": "zero",
+      "record": {
+        "activation_units": 0,
+        "remaining_episode_units": 0,
+        "remaining_model_calls": 0,
+        "remaining_actions": 0,
+        "admission_id": {
+          "$bytes": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "hex": "a56c61646d697373696f6e5f6964582000000000000000000000000000000000000000000000000000000000000000007061637469766174696f6e5f756e697473007172656d61696e696e675f616374696f6e73007572656d61696e696e675f6d6f64656c5f63616c6c73007772656d61696e696e675f657069736f64655f756e69747300",
+      "sha256": "5ac60a25f094899d6e30e0fee6778d0ee67994385d96a170c564c22177174de1"
+    },
+    {
+      "name": "full-u64",
+      "record": {
+        "activation_units": 18446744073709551615,
+        "remaining_episode_units": 18446744073709551615,
+        "remaining_model_calls": 18446744073709551615,
+        "remaining_actions": 18446744073709551615,
+        "admission_id": {
+          "$bytes": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        }
+      },
+      "hex": "a56c61646d697373696f6e5f69645820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7061637469766174696f6e5f756e6974731bffffffffffffffff7172656d61696e696e675f616374696f6e731bffffffffffffffff7572656d61696e696e675f6d6f64656c5f63616c6c731bffffffffffffffff7772656d61696e696e675f657069736f64655f756e6974731bffffffffffffffff",
+      "sha256": "dc77c641f5ba6c2c2b29f91d0e7ba19d38065910dbacf64258b5b3b05678555d"
+    }
+  ],
+  "usage": [
+    {
+      "name": "unknown",
+      "record": {
+        "model_calls": 1,
+        "local_tool_calls": 2,
+        "input_tokens": null,
+        "output_tokens": null,
+        "billed_units": null
+      },
+      "hex": "a56b6d6f64656c5f63616c6c73016c62696c6c65645f756e697473f66c696e7075745f746f6b656e73f66d6f75747075745f746f6b656e73f6706c6f63616c5f746f6f6c5f63616c6c7302",
+      "sha256": "e439a9fbf4dd5808056beb85a32ade0bcb87ff5592272237971b5f354af67b1d"
+    },
+    {
+      "name": "known-zero",
+      "record": {
+        "model_calls": 0,
+        "local_tool_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "billed_units": 0
+      },
+      "hex": "a56b6d6f64656c5f63616c6c73006c62696c6c65645f756e697473006c696e7075745f746f6b656e73006d6f75747075745f746f6b656e7300706c6f63616c5f746f6f6c5f63616c6c7300",
+      "sha256": "6edaaab08e052247ccf1769d7795f1899fc0375297b320d7397c4fdf5bfc24c0"
+    },
+    {
+      "name": "mixed",
+      "record": {
+        "model_calls": 3,
+        "local_tool_calls": 4,
+        "input_tokens": null,
+        "output_tokens": 17,
+        "billed_units": 23
+      },
+      "hex": "a56b6d6f64656c5f63616c6c73036c62696c6c65645f756e697473176c696e7075745f746f6b656e73f66d6f75747075745f746f6b656e7311706c6f63616c5f746f6f6c5f63616c6c7304",
+      "sha256": "7822a449baaf3055fc566429456866c56adc0c1e147650fdb1828ad88f712da4"
+    },
+    {
+      "name": "full-u64",
+      "record": {
+        "model_calls": 18446744073709551615,
+        "local_tool_calls": 18446744073709551615,
+        "input_tokens": 18446744073709551615,
+        "output_tokens": 18446744073709551615,
+        "billed_units": 18446744073709551615
+      },
+      "hex": "a56b6d6f64656c5f63616c6c731bffffffffffffffff6c62696c6c65645f756e6974731bffffffffffffffff6c696e7075745f746f6b656e731bffffffffffffffff6d6f75747075745f746f6b656e731bffffffffffffffff706c6f63616c5f746f6f6c5f63616c6c731bffffffffffffffff",
+      "sha256": "09d792932d2e34598434c940694d1cbc0131d1a08bc1c159f04581e7064f764e"
+    }
+  ]
+}

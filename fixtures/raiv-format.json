@@ -1,0 +1,82 @@
+[
+  {
+    "name": "empty map",
+    "data": "a0"
+  },
+  {
+    "name": "false",
+    "data": "f4"
+  },
+  {
+    "name": "true",
+    "data": "f5"
+  },
+  {
+    "name": "u64 runtime maximum",
+    "data": "1bffffffffffffffff"
+  },
+  {
+    "name": "encoded-key ordering b before aa",
+    "data": "a261620062616100"
+  },
+  {
+    "name": "plain lexical ordering aa before b",
+    "data": "a262616100616200"
+  },
+  {
+    "name": "valid structural CID link",
+    "data": "d82a58250001711220c19a797fa1fd590cd2e5b42d1cf5f246e29b91684e2f87404b81dc345c7a56a0"
+  },
+  {
+    "name": "nonzero CID identity prefix",
+    "data": "d82a58250101711220c19a797fa1fd590cd2e5b42d1cf5f246e29b91684e2f87404b81dc345c7a56a0"
+  },
+  {
+    "name": "tag 42 over text",
+    "data": "d82a6161"
+  },
+  {
+    "name": "reserved additional information",
+    "data": "1c"
+  },
+  {
+    "name": "truncated length header",
+    "data": "19ff"
+  },
+  {
+    "name": "declared text length exceeds remaining bytes",
+    "data": "6478"
+  },
+  {
+    "name": "declared list count exceeds remaining bytes",
+    "data": "8200"
+  },
+  {
+    "name": "nonminimal integer at 24 threshold",
+    "data": "1817"
+  },
+  {
+    "name": "minimal integer at 24 threshold",
+    "data": "1818"
+  },
+  {
+    "name": "nonminimal integer at 256 threshold",
+    "data": "1900ff"
+  },
+  {
+    "name": "minimal integer at 256 threshold",
+    "data": "190100"
+  },
+  {
+    "name": "nonminimal byte string length",
+    "data": "580141"
+  },
+  {
+    "name": "nonminimal tag 42",
+    "data": "d9002a58250001711220c19a797fa1fd590cd2e5b42d1cf5f246e29b91684e2f87404b81dc345c7a56a0"
+  },
+  {
+    "name": "root followed by break",
+    "data": "a0ff"
+  }
+]

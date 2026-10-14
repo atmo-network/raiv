@@ -1,0 +1,39 @@
+# Supported offline scripted subset, not the full target application schema.
+# run-scenario is an alternative to init/init-world: requires two EMPTY namespaces;
+# no rerun/repair/reseed, fixed native test administration, not authentic Actor/backend.
+# Copy this file, create your operator-owned blocks directory, build the guest,
+# and replace module_digest with the SHA-256 of the exact independently approved module.
+# The zero placeholder intentionally fails module validation. No secrets/env lookup.
+schema_version = 1
+state_format = "raiv-state/1"
+
+[agent]
+profile = "survivor" # "veto" disables Memory; cannot rebind an existing checkpoint
+id = "b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0"
+
+[execution]
+adapter = "local-trusted"
+
+[runtime]
+guest_module = "../../target/wasm32v1-none/release/raiv_agent.wasm"
+module_digest = "0000000000000000000000000000000000000000000000000000000000000000"
+
+[inference]
+protocol = "scripted"
+model = "fixture-model"
+
+[storage]
+adapter = "disk"
+directory = "./var/blocks"
+
+[acceptance]
+adapter = "local"
+
+# Optional independent synthetic world, provisioned explicitly BEFORE the first wake.
+# Uncomment and create this separate operator-owned directory before init-world.
+# [executor]
+# adapter = "scripted-unit-world"
+# directory = "./var/world"
+# world_id = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+# virtual_units = "10" # Canonical decimal text, full u64; not real funds
+# capacity = 16 # 1..1024 retained ledger slots, not a Core action budget

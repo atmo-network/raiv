@@ -1,0 +1,704 @@
+{
+  "version": 1,
+  "upstream_revision": "b6ea320b07b385c417aaae265425ec334a3fd70c",
+  "description": "Raiv overrides upstream CBOR profile expectations. Structural wire uses only DRISL links; integer_range cases exercise model values, not u64 runtime counters. Acceptance is planned, not executed.",
+  "families": [
+    {
+      "file": "dasl-testing/cid.json",
+      "scope": "structural_wire",
+      "cases": [
+        {
+          "index": 0,
+          "name": "long CID tag",
+          "expected": "reject"
+        },
+        {
+          "index": 1,
+          "name": "valid CID with short tag",
+          "expected": "reject"
+        },
+        {
+          "index": 2,
+          "name": "invalid CID",
+          "expected": "reject"
+        },
+        {
+          "index": 3,
+          "name": "CIDv0",
+          "expected": "reject"
+        },
+        {
+          "index": 4,
+          "name": "invalid hash size",
+          "expected": "reject"
+        },
+        {
+          "index": 5,
+          "name": "Big DASL CID",
+          "expected": "reject"
+        },
+        {
+          "index": 6,
+          "name": "empty CID",
+          "expected": "reject"
+        },
+        {
+          "index": 7,
+          "name": "short hash digest",
+          "expected": "reject"
+        },
+        {
+          "index": 8,
+          "name": "long hash digest",
+          "expected": "reject"
+        },
+        {
+          "index": 9,
+          "name": "CIDv1 that isn't raw or cbor",
+          "expected": "reject"
+        },
+        {
+          "index": 10,
+          "name": "disallowed hash type (SHA-1)",
+          "expected": "reject"
+        },
+        {
+          "index": 11,
+          "name": "CID with no null byte",
+          "expected": "reject"
+        }
+      ]
+    },
+    {
+      "file": "dasl-testing/concat.json",
+      "scope": "structural_wire",
+      "cases": [
+        {
+          "index": 0,
+          "name": "concatenated objects / CBOR sequence",
+          "expected": "reject"
+        }
+      ]
+    },
+    {
+      "file": "dasl-testing/floats.json",
+      "scope": "structural_wire",
+      "cases": [
+        {
+          "index": 0,
+          "name": "float reduction",
+          "expected": "reject"
+        },
+        {
+          "index": 1,
+          "name": "64-bit floats only",
+          "expected": "reject"
+        },
+        {
+          "index": 2,
+          "name": "64-bit floats only",
+          "expected": "reject"
+        },
+        {
+          "index": 3,
+          "name": "float reduction",
+          "expected": "reject"
+        },
+        {
+          "index": 4,
+          "name": "short NaN",
+          "expected": "reject"
+        },
+        {
+          "index": 5,
+          "name": "long NaN",
+          "expected": "reject"
+        },
+        {
+          "index": 6,
+          "name": "negative zero float64",
+          "expected": "reject"
+        },
+        {
+          "index": 7,
+          "name": "zero float64",
+          "expected": "reject"
+        },
+        {
+          "index": 8,
+          "name": "zero float16",
+          "expected": "reject"
+        },
+        {
+          "index": 9,
+          "name": "64-bit subnormal number",
+          "expected": "reject"
+        },
+        {
+          "index": 10,
+          "name": "short NaN",
+          "expected": "reject"
+        },
+        {
+          "index": 11,
+          "name": "short Inf",
+          "expected": "reject"
+        },
+        {
+          "index": 12,
+          "name": "32-bit Inf",
+          "expected": "reject"
+        },
+        {
+          "index": 13,
+          "name": "64-bit Inf",
+          "expected": "reject"
+        },
+        {
+          "index": 14,
+          "name": "short -Inf",
+          "expected": "reject"
+        },
+        {
+          "index": 15,
+          "name": "32-bit -Inf",
+          "expected": "reject"
+        },
+        {
+          "index": 16,
+          "name": "64-bit -Inf",
+          "expected": "reject"
+        },
+        {
+          "index": 17,
+          "name": "NaN",
+          "expected": "reject"
+        },
+        {
+          "index": 18,
+          "name": "Inf",
+          "expected": "reject"
+        },
+        {
+          "index": 19,
+          "name": "-Inf",
+          "expected": "reject"
+        },
+        {
+          "index": 20,
+          "name": "negative zero",
+          "expected": "reject"
+        },
+        {
+          "index": 21,
+          "name": "NaN with payload",
+          "expected": "reject"
+        },
+        {
+          "index": 22,
+          "name": "signaling NaN",
+          "expected": "reject"
+        }
+      ]
+    },
+    {
+      "file": "dasl-testing/indefinite.json",
+      "scope": "structural_wire",
+      "cases": [
+        {
+          "index": 0,
+          "name": "indefinite map",
+          "expected": "reject"
+        },
+        {
+          "index": 1,
+          "name": "indefinite array",
+          "expected": "reject"
+        },
+        {
+          "index": 2,
+          "name": "indefinite byte string",
+          "expected": "reject"
+        },
+        {
+          "index": 3,
+          "name": "indefinite string",
+          "expected": "reject"
+        }
+      ]
+    },
+    {
+      "file": "dasl-testing/integer_range.json",
+      "scope": "model_value",
+      "cases": [
+        {
+          "index": 0,
+          "name": "largest CBOR integer, 2^64-1",
+          "expected": "reject"
+        },
+        {
+          "index": 1,
+          "name": "smallest CBOR integer, -(2^64)",
+          "expected": "reject"
+        },
+        {
+          "index": 2,
+          "name": "max safe JS integer, 2^53-1",
+          "expected": "accept"
+        },
+        {
+          "index": 3,
+          "name": "2^53+1, unrepresentable in JS",
+          "expected": "reject"
+        },
+        {
+          "index": 4,
+          "name": "min safe JS integer, -(2^53-1)",
+          "expected": "accept"
+        },
+        {
+          "index": 5,
+          "name": "-(2^53+1), unrepresentable in JS",
+          "expected": "reject"
+        },
+        {
+          "index": 6,
+          "name": "smallest unsigned bigint",
+          "expected": "reject"
+        },
+        {
+          "index": 7,
+          "name": "highest negative bigint",
+          "expected": "reject"
+        },
+        {
+          "index": 8,
+          "name": "bignum",
+          "expected": "reject"
+        },
+        {
+          "index": 9,
+          "name": "bignum",
+          "expected": "reject"
+        },
+        {
+          "index": 10,
+          "name": "bignum with small value",
+          "expected": "reject"
+        }
+      ]
+    },
+    {
+      "file": "dasl-testing/map_keys.json",
+      "scope": "structural_wire",
+      "cases": [
+        {
+          "index": 0,
+          "name": "map with string key",
+          "expected": "accept"
+        },
+        {
+          "index": 1,
+          "name": "map with int key",
+          "expected": "reject"
+        },
+        {
+          "index": 2,
+          "name": "map with int key",
+          "expected": "reject"
+        },
+        {
+          "index": 3,
+          "name": "map keys in correct order",
+          "expected": "accept"
+        },
+        {
+          "index": 4,
+          "name": "map keys in incorrect order",
+          "expected": "reject"
+        },
+        {
+          "index": 5,
+          "name": "duplicate map keys",
+          "expected": "reject"
+        }
+      ]
+    },
+    {
+      "file": "dasl-testing/numeric_reduction.json",
+      "scope": "structural_wire",
+      "cases": [
+        {
+          "index": 0,
+          "name": "0.0 could be reduced",
+          "expected": "reject"
+        },
+        {
+          "index": 1,
+          "name": "-0.0 could be reduced",
+          "expected": "reject"
+        },
+        {
+          "index": 2,
+          "name": "map with equal int and float keys",
+          "expected": "reject"
+        },
+        {
+          "index": 3,
+          "name": "too small for int reduction, <-(2^63)",
+          "expected": "reject"
+        }
+      ]
+    },
+    {
+      "file": "dasl-testing/short_form.json",
+      "scope": "structural_wire",
+      "cases": [
+        {
+          "index": 0,
+          "name": "one item map",
+          "expected": "accept"
+        },
+        {
+          "index": 1,
+          "name": "unnecessary one-byte map definition",
+          "expected": "reject"
+        },
+        {
+          "index": 2,
+          "name": "unnecessary two-byte map definition",
+          "expected": "reject"
+        },
+        {
+          "index": 3,
+          "name": "unnecessary four-byte map definition",
+          "expected": "reject"
+        },
+        {
+          "index": 4,
+          "name": "unnecessary eight-byte map definition",
+          "expected": "reject"
+        },
+        {
+          "index": 5,
+          "name": "small unsigned integer",
+          "expected": "accept"
+        },
+        {
+          "index": 6,
+          "name": "unnecessary one-byte unsigned integer",
+          "expected": "reject"
+        },
+        {
+          "index": 7,
+          "name": "unnecessary two-byte unsigned integer",
+          "expected": "reject"
+        },
+        {
+          "index": 8,
+          "name": "unnecessary four-byte unsigned integer",
+          "expected": "reject"
+        },
+        {
+          "index": 9,
+          "name": "unnecessary eight-byte unsigned integer",
+          "expected": "reject"
+        },
+        {
+          "index": 10,
+          "name": "small negative integer",
+          "expected": "accept"
+        },
+        {
+          "index": 11,
+          "name": "unnecessary one-byte negative integer",
+          "expected": "reject"
+        },
+        {
+          "index": 12,
+          "name": "unnecessary two-byte negative integer",
+          "expected": "reject"
+        },
+        {
+          "index": 13,
+          "name": "unnecessary four-byte negative integer",
+          "expected": "reject"
+        },
+        {
+          "index": 14,
+          "name": "unnecessary eight-byte negative integer",
+          "expected": "reject"
+        },
+        {
+          "index": 15,
+          "name": "empty byte string",
+          "expected": "accept"
+        },
+        {
+          "index": 16,
+          "name": "unnecessary one-byte byte string",
+          "expected": "reject"
+        },
+        {
+          "index": 17,
+          "name": "unnecessary two-byte byte string",
+          "expected": "reject"
+        },
+        {
+          "index": 18,
+          "name": "unnecessary four-byte byte string",
+          "expected": "reject"
+        },
+        {
+          "index": 19,
+          "name": "unnecessary eight-byte byte string",
+          "expected": "reject"
+        },
+        {
+          "index": 20,
+          "name": "empty string",
+          "expected": "accept"
+        },
+        {
+          "index": 21,
+          "name": "unnecessary one-byte string",
+          "expected": "reject"
+        },
+        {
+          "index": 22,
+          "name": "unnecessary two-byte string",
+          "expected": "reject"
+        },
+        {
+          "index": 23,
+          "name": "unnecessary four-byte string",
+          "expected": "reject"
+        },
+        {
+          "index": 24,
+          "name": "unnecessary eight-byte string",
+          "expected": "reject"
+        },
+        {
+          "index": 25,
+          "name": "empty array",
+          "expected": "accept"
+        },
+        {
+          "index": 26,
+          "name": "unnecessary one-byte array",
+          "expected": "reject"
+        },
+        {
+          "index": 27,
+          "name": "unnecessary two-byte array",
+          "expected": "reject"
+        },
+        {
+          "index": 28,
+          "name": "unnecessary four-byte array",
+          "expected": "reject"
+        },
+        {
+          "index": 29,
+          "name": "unnecessary eight-byte array",
+          "expected": "reject"
+        },
+        {
+          "index": 30,
+          "name": "bigint with leading zero bytes",
+          "expected": "reject"
+        }
+      ]
+    },
+    {
+      "file": "dasl-testing/simple.json",
+      "scope": "structural_wire",
+      "cases": [
+        {
+          "index": 0,
+          "name": "simple value 'undefined'",
+          "expected": "reject"
+        },
+        {
+          "index": 1,
+          "name": "simple value 'undefined'",
+          "expected": "reject"
+        },
+        {
+          "index": 2,
+          "name": "unassigned simple value",
+          "expected": "reject"
+        },
+        {
+          "index": 3,
+          "name": "unassigned simple value",
+          "expected": "reject"
+        },
+        {
+          "index": 4,
+          "name": "simple value 'null'",
+          "expected": "accept"
+        }
+      ]
+    },
+    {
+      "file": "dasl-testing/tags.json",
+      "scope": "structural_wire",
+      "cases": [
+        {
+          "index": 0,
+          "name": "tag that isn't 42",
+          "expected": "reject"
+        },
+        {
+          "index": 1,
+          "name": "tagged object (datetime)",
+          "expected": "reject"
+        },
+        {
+          "index": 2,
+          "name": "self-describing CBOR",
+          "expected": "reject"
+        }
+      ]
+    },
+    {
+      "file": "dasl-testing/utf8.json",
+      "scope": "structural_wire",
+      "cases": [
+        {
+          "index": 0,
+          "name": "complex UTF-8 string",
+          "expected": "accept"
+        },
+        {
+          "index": 1,
+          "name": "commonly escaped characters",
+          "expected": "accept"
+        },
+        {
+          "index": 2,
+          "name": "invalid UTF-8",
+          "expected": "reject"
+        },
+        {
+          "index": 3,
+          "name": "text not in Unicode Normalization Form C",
+          "expected": "accept"
+        },
+        {
+          "index": 4,
+          "name": "text not in Unicode Normalization Form C",
+          "expected": "accept"
+        }
+      ]
+    },
+    {
+      "file": "raiv-format.json",
+      "scope": "structural_wire",
+      "cases": [
+        {
+          "index": 0,
+          "name": "empty map",
+          "expected": "accept"
+        },
+        {
+          "index": 1,
+          "name": "false",
+          "expected": "accept"
+        },
+        {
+          "index": 2,
+          "name": "true",
+          "expected": "accept"
+        },
+        {
+          "index": 3,
+          "name": "u64 runtime maximum",
+          "expected": "accept"
+        },
+        {
+          "index": 4,
+          "name": "encoded-key ordering b before aa",
+          "expected": "accept"
+        },
+        {
+          "index": 5,
+          "name": "plain lexical ordering aa before b",
+          "expected": "reject"
+        },
+        {
+          "index": 6,
+          "name": "valid structural CID link",
+          "expected": "accept"
+        },
+        {
+          "index": 7,
+          "name": "nonzero CID identity prefix",
+          "expected": "reject"
+        },
+        {
+          "index": 8,
+          "name": "tag 42 over text",
+          "expected": "reject"
+        },
+        {
+          "index": 9,
+          "name": "reserved additional information",
+          "expected": "reject"
+        },
+        {
+          "index": 10,
+          "name": "truncated length header",
+          "expected": "reject"
+        },
+        {
+          "index": 11,
+          "name": "declared text length exceeds remaining bytes",
+          "expected": "reject"
+        },
+        {
+          "index": 12,
+          "name": "declared list count exceeds remaining bytes",
+          "expected": "reject"
+        },
+        {
+          "index": 13,
+          "name": "nonminimal integer at 24 threshold",
+          "expected": "reject"
+        },
+        {
+          "index": 14,
+          "name": "minimal integer at 24 threshold",
+          "expected": "accept"
+        },
+        {
+          "index": 15,
+          "name": "nonminimal integer at 256 threshold",
+          "expected": "reject"
+        },
+        {
+          "index": 16,
+          "name": "minimal integer at 256 threshold",
+          "expected": "accept"
+        },
+        {
+          "index": 17,
+          "name": "nonminimal byte string length",
+          "expected": "reject"
+        },
+        {
+          "index": 18,
+          "name": "nonminimal tag 42",
+          "expected": "reject"
+        },
+        {
+          "index": 19,
+          "name": "root followed by break",
+          "expected": "reject"
+        }
+      ]
+    }
+  ]
+}

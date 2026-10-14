@@ -1,0 +1,18 @@
+[package]
+name = "raiv-agent-guest"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.85"
+publish = false
+license = "Unlicense"
+
+[lib]
+name = "raiv_agent"
+crate-type = ["rlib"]
+
+[dependencies]
+raiv = { path = "../../../lib", default-features = false }
+minicbor = { version = "=2.3.0", default-features = false }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+dlmalloc = { version = "=0.2.11", default-features = false, features = ["global"] }
