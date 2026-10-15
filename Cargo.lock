@@ -458,7 +458,7 @@ dependencies = [
 
 [[package]]
 name = "raiv"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "ciborium",
  "data-encoding",
@@ -469,7 +469,7 @@ dependencies = [
 
 [[package]]
 name = "raiv-agent-guest"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "dlmalloc",
  "minicbor",
@@ -478,7 +478,7 @@ dependencies = [
 
 [[package]]
 name = "raiv-agent-host"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "ciborium",
  "crossterm",

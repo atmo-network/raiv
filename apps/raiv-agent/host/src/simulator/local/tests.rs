@@ -2,16 +2,19 @@ use super::*;
 use crate::simulator::tests::{entry, receipt};
 use raiv::format::DecodeLimits;
 use raiv::receipt::Outcome;
+
 fn caps() -> ExecutorLimits {
     ExecutorLimits {
         wire: DecodeLimits::default(),
         max_actions: 10,
     }
 }
+
 fn data(rows: &[&Entry]) -> ExecutorCheckpoint {
     let e = entry(1, 1);
     ExecutorCheckpoint::test_frame(e.anchor.agent_id, e.program, rows, &caps(), None)
 }
+
 #[test]
 fn ready_extension_allows_only_one_new_ready_slot_and_preserves_every_prior_terminal_byte_and_policy(
 ) {
@@ -47,6 +50,7 @@ fn ready_extension_allows_only_one_new_ready_slot_and_preserves_every_prior_term
         b.command.action_id()
     ));
 }
+
 #[test]
 fn submitted_or_terminal_same_slot_never_becomes_ready_and_staged_payloads_leave_native_entries_unchanged(
 ) {
@@ -88,6 +92,7 @@ fn bootstrap_limits() -> LocalExecutorLimits {
         caller: Limits::default(),
     }
 }
+
 #[test]
 fn guarded_genesis_bootstrap_ack_unknown_without_actions_or_main_rewrite_and_refuse_stale_pins_caps_or_admissions(
 ) {
@@ -154,6 +159,7 @@ fn guarded_genesis_bootstrap_ack_unknown_without_actions_or_main_rewrite_and_ref
     ));
     assert!(book.is_empty());
 }
+
 #[test]
 fn absent_executor_amid_any_non_source_name_or_corrupt_dependency_refuses_without_cleanup_or_baseline_fallback(
 ) {
@@ -202,6 +208,7 @@ fn absent_executor_amid_any_non_source_name_or_corrupt_dependency_refuses_withou
     assert!(!directory.0.join("raiv-executor.cbor").exists());
     assert!(book.is_empty());
 }
+
 #[test]
 fn corrupt_or_foreign_executor_frame_is_not_absence_and_source_namespace_check_is_confined_to_held_fd(
 ) {

@@ -1,4 +1,5 @@
 //! Executable ActorWake -> one durable boundary; scripted provider data, no execution.
+
 use super::*;
 use minicbor::encode::Write;
 use raiv::{
@@ -13,6 +14,7 @@ use raiv_agent_host::{
     checkpoint::{CheckpointManifest, ManifestLimits},
     disk::DiskBlockStore,
 };
+
 fn limits() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -20,6 +22,7 @@ fn limits() -> ManifestLimits {
         max_admissions: 1024,
     }
 }
+
 pub(super) fn grant() -> BudgetAdmission {
     BudgetAdmission {
         admission_id: [0x75; 32],
@@ -29,6 +32,7 @@ pub(super) fn grant() -> BudgetAdmission {
         remaining_actions: 4,
     }
 }
+
 pub(super) fn input() -> ActivationInput {
     ActivationInput::encode(
         &ActivationInputSpec {
@@ -47,6 +51,7 @@ pub(super) fn input() -> ActivationInput {
     )
     .unwrap()
 }
+
 pub(super) fn frame(id: u64, tool: &str, args: &[u8]) -> Vec<u8> {
     let mut e = minicbor::Encoder::new(minicbor::encode::write::Cursor::new([0u8; 4096]));
     e.map(4)
@@ -88,6 +93,7 @@ pub(super) fn frame(id: u64, tool: &str, args: &[u8]) -> Vec<u8> {
     e.str("request_id").unwrap().u64(id).unwrap();
     e.writer().get_ref()[..e.writer().position()].to_vec()
 }
+
 pub(super) fn script(path: &Path, frames: &[Vec<u8>]) {
     let mut e = minicbor::Encoder::new(minicbor::encode::write::Cursor::new([0u8; 16384]));
     e.array(frames.len() as u64).unwrap();
@@ -96,6 +102,7 @@ pub(super) fn script(path: &Path, frames: &[Vec<u8>]) {
     }
     fs::write(path, &e.writer().get_ref()[..e.writer().position()]).unwrap();
 }
+
 pub(super) fn wake(home: &Path, digest: &str) -> Output {
     Command::new(env!("CARGO_BIN_EXE_raiv-agent"))
         .arg("wake")
@@ -114,6 +121,7 @@ pub(super) fn wake(home: &Path, digest: &str) -> Output {
         .output()
         .unwrap()
 }
+
 pub(super) fn fields(output: &Output, key: &str) -> String {
     String::from_utf8(output.stdout.clone())
         .unwrap()
@@ -122,6 +130,7 @@ pub(super) fn fields(output: &Output, key: &str) -> String {
         .unwrap()
         .into()
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_wake_exactly_one_accepted_boundary_and_incomplete_run_never_relaunches_or_executes() {
@@ -224,6 +233,13 @@ fn real_wake_exactly_one_accepted_boundary_and_incomplete_run_never_relaunches_o
             snapshot
                 .memory()
                 .map(|m| m.cid().to_string())
+                .unwrap_or_else(|| "none".into())
+        );
+        assert_eq!(
+            fields(&status, "memory"),
+            snapshot
+                .memory()
+                .map(|m| m.json().to_string())
                 .unwrap_or_else(|| "none".into())
         );
         assert_eq!(

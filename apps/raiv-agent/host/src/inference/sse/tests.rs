@@ -1,5 +1,6 @@
 use super::*;
 use raiv::activation::{ModelReply, ReplyError};
+
 fn caps() -> StreamLimits {
     StreamLimits {
         max_wire_bytes: 65536,
@@ -7,15 +8,19 @@ fn caps() -> StreamLimits {
         max_events: 64,
     }
 }
+
 fn assembler() -> ChatCompletionStream {
     ChatCompletionStream::new(u64::MAX, "m", Limits::default(), caps()).unwrap()
 }
+
 fn chunk(delta: Value, finish: Value) -> Value {
     json!({"id":"response-1","model":"m","choices":[{"index":0,"delta":delta,"finish_reason":finish}]})
 }
+
 fn event(value: &Value) -> Vec<u8> {
     format!("data: {}\r\n\r\n", serde_json::to_string(value).unwrap()).into_bytes()
 }
+
 fn trace() -> Vec<Vec<u8>> {
     vec![
         event(&chunk(
@@ -36,9 +41,11 @@ fn trace() -> Vec<Vec<u8>> {
         b"data: [DONE]\r\n\r\n".to_vec(),
     ]
 }
+
 fn complete() -> NormalizedReply {
     normalize_chat_completion(&serde_json::to_vec(&json!({"model":"m","choices":[{"index":0,"finish_reason":"tool_calls","message":{"role":"assistant","content":"Привет мир🌍","reasoning_content":"r1r2","tool_calls":[{"id":"call-1","type":"function","function":{"name":"patch_memory","arguments":"{\"goals\":[null],\"intents\":{\"keep\":false}}"}}]}}],"usage":{"prompt_tokens":u64::MAX,"completion_tokens":0}})).unwrap(),u64::MAX,"m",&Limits::default()).unwrap()
 }
+
 #[test]
 fn all_byte_splits_utf8_crlf_tool_fragments_and_usage_tail_equal_complete_normalization() {
     let wire = trace().concat();
@@ -63,6 +70,7 @@ fn all_byte_splits_utf8_crlf_tool_fragments_and_usage_tail_equal_complete_normal
     assert_eq!(reply.usage().output_tokens, Some(0));
     assert!(reply.control_call().unwrap().is_some());
 }
+
 #[test]
 fn lf_cr_bom_comments_metadata_and_multiline_data_frame_without_selecting_remote_ids() {
     for ending in ["\n", "\r", "\r\n"] {
@@ -83,6 +91,7 @@ fn lf_cr_bom_comments_metadata_and_multiline_data_frame_without_selecting_remote
         assert_eq!(reply.request_id(), u64::MAX);
     }
 }
+
 #[test]
 fn complete_empty_stop_normalizes_to_zero_calls_only_after_done_and_successful_end() {
     let terminal = event(&chunk(
@@ -107,6 +116,7 @@ fn complete_empty_stop_normalizes_to_zero_calls_only_after_done_and_successful_e
     assert!(stream.push(b"data: {}\n\n").is_err());
     assert!(stream.finish().is_err());
 }
+
 #[test]
 fn provisional_text_and_terminal_chunk_without_done_or_unterminated_event_never_finish() {
     let first = event(&chunk(
@@ -136,6 +146,7 @@ fn provisional_text_and_terminal_chunk_without_done_or_unterminated_event_never_
     assert!(stream.push(b"data: [DONE]\n\n").is_err());
     assert!(matches!(stream.finish(), Err(StreamError::Failed)));
 }
+
 #[test]
 fn malformed_duplicate_model_id_index_role_refusal_and_terminal_conflicts_poison_stream() {
     let good = chunk(json!({"role":"assistant","content":"ok"}), Value::Null);
@@ -189,6 +200,7 @@ fn malformed_duplicate_model_id_index_role_refusal_and_terminal_conflicts_poison
     stream.push(&terminal).unwrap();
     assert!(stream.push(&event(&good)).is_err());
 }
+
 #[test]
 fn whole_wire_event_crlf_and_event_count_limits_include_ignored_metadata() {
     let frames = trace();
@@ -254,6 +266,7 @@ fn whole_wire_event_crlf_and_event_count_limits_include_ignored_metadata() {
     let giant = format!("data: {}\n\n", "x".repeat(4096));
     assert!(stream.push(giant.as_bytes()).is_err());
 }
+
 #[test]
 fn tool_call_index_identity_cardinality_and_late_argument_failure_never_salvage_first() {
     let first = trace()[0].clone();
@@ -296,6 +309,7 @@ fn tool_call_index_identity_cardinality_and_late_argument_failure_never_salvage_
         assert!(stream.finish().is_err());
     }
 }
+
 #[test]
 fn done_is_not_permission_to_ignore_trailing_data_or_conflicting_token_reports() {
     let mut stream = assembler();
@@ -317,6 +331,7 @@ fn done_is_not_permission_to_ignore_trailing_data_or_conflicting_token_reports()
     stream.push(b"data: partial").unwrap();
     assert!(stream.finish().is_err());
 }
+
 #[test]
 fn assembled_and_final_normalized_bounds_remain_separate_and_reasoning_is_native_only() {
     let limits = Limits {
@@ -341,4 +356,47 @@ fn assembled_and_final_normalized_bounds_remain_separate_and_reasoning_is_native
     let result = complete();
     assert_eq!(result.reasoning_content(), Some("r1r2"));
     assert!(!result.as_bytes().windows(4).any(|v| v == b"r1r2"));
+}
+
+#[test]
+fn continuation_chunks_may_repeat_type_and_an_empty_id_without_changing_call_identity() {
+    // Shape observed from an OpenAI-compatible server: every continuation repeats type/id "".
+    let mut stream = ChatCompletionStream::new(7, "m", Limits::default(), caps()).unwrap();
+    for (delta, finish) in [
+        (
+            json!({"role":"assistant","content":"","reasoning_content":""}),
+            Value::Null,
+        ),
+        (
+            json!({"content":"Hi!","tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"patch_memory","arguments":""}}]}),
+            Value::Null,
+        ),
+        (
+            json!({"content":"","tool_calls":[{"index":0,"id":"","type":"function","function":{"arguments":"{\"intents\""}}]}),
+            Value::Null,
+        ),
+        (
+            json!({"tool_calls":[{"index":0,"id":"","type":"function","function":{"arguments":":{}}"}}]}),
+            Value::Null,
+        ),
+        (json!({}), json!("tool_calls")),
+    ] {
+        stream.push(&event(&chunk(delta, finish))).unwrap();
+    }
+    stream.push(b"data: [DONE]\n\n").unwrap();
+    let reply = stream.finish().unwrap();
+    let parsed = ModelReply::decode(reply.as_bytes(), &Limits::default()).unwrap();
+    assert_eq!(
+        parsed.calls().map(|c| c.call_id).collect::<Vec<_>>(),
+        ["call_1"]
+    );
+    // A nonempty different id still poisons the stream.
+    let mut stream = assembler();
+    stream.push(&trace()[0]).unwrap();
+    assert!(stream
+        .push(&event(&chunk(
+            json!({"tool_calls":[{"index":0,"id":"call-2","type":"function"}]}),
+            Value::Null
+        )))
+        .is_err());
 }

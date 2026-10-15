@@ -1,12 +1,15 @@
 //! Host-only Chat Completions HTTPS/JSON/SSE ports. No guest decisions or acceptance.
+
 pub mod http;
 mod json;
 #[cfg(target_os = "linux")]
 pub mod request;
 pub mod sse;
+
 use raiv::{activation::ModelReply, format::DecodeLimits, limits::Limits, usage::Usage};
 use serde_json::Value;
 use std::fmt;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NormalizeError {
     Json,
@@ -17,6 +20,7 @@ pub enum NormalizeError {
     Allocation,
     Wire,
 }
+
 impl fmt::Display for NormalizeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -30,27 +34,34 @@ impl fmt::Display for NormalizeError {
         })
     }
 }
+
 impl std::error::Error for NormalizeError {}
+
 /// Ephemeral native normalization result; not admission, checkpoint or successful stream evidence.
 /// Reasoning belongs only to the live native provider continuation, never guest text/state.
 pub struct NormalizedReply {
     bytes: Vec<u8>,
     reasoning: Option<String>,
 }
+
 impl NormalizedReply {
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
     }
+
     pub fn reasoning_content(&self) -> Option<&str> {
         self.reasoning.as_deref()
     }
 }
+
 struct Writer {
     bytes: Vec<u8>,
     cap: u64,
 }
+
 impl minicbor::encode::Write for Writer {
     type Error = NormalizeError;
+
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), Self::Error> {
         let next = self
             .bytes
@@ -67,22 +78,27 @@ impl minicbor::encode::Write for Writer {
         Ok(())
     }
 }
+
 type Encoder = minicbor::Encoder<Writer>;
+
 fn encoded(error: minicbor::encode::Error<NormalizeError>) -> NormalizeError {
     error.into_write().unwrap_or(NormalizeError::Wire)
 }
+
 fn string<'a>(value: &'a Value, key: &str) -> Result<&'a str, NormalizeError> {
     value
         .get(key)
         .and_then(Value::as_str)
         .ok_or(NormalizeError::Schema)
 }
+
 fn optional_count(value: Option<&Value>) -> Result<Option<u64>, NormalizeError> {
     match value {
         None | Some(Value::Null) => Ok(None),
         Some(value) => value.as_u64().map(Some).ok_or(NormalizeError::Schema),
     }
 }
+
 // DRISL arguments remain opaque here: valid scalars/arrays/full-u64 reach Core's recoverable
 // single-call model-Map selection. Floats cannot enter DRISL; no numeric/string coercion.
 fn argument(value: &Value, e: &mut Encoder) -> Result<(), NormalizeError> {
@@ -131,6 +147,25 @@ fn argument(value: &Value, e: &mut Encoder) -> Result<(), NormalizeError> {
     }
     Ok(())
 }
+
+/// A reported model matches the configured exact ID, or its dated snapshot `<model>-YYYY-MM-DD`
+/// (as OpenAI-compatible providers report aliases). No other prefix, case or alias matches.
+pub fn model_matches(configured: &str, reported: &str) -> bool {
+    reported == configured
+        || reported
+            .strip_prefix(configured)
+            .and_then(|rest| rest.strip_prefix('-'))
+            .is_some_and(|date| {
+                let b = date.as_bytes();
+                b.len() == 10
+                    && b[4] == b'-'
+                    && b[7] == b'-'
+                    && b.iter()
+                        .enumerate()
+                        .all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit())
+            })
+}
+
 /// Normalize one complete successful non-streamed response (or externally completed assembly).
 /// Caller binds request_id and exact model to its native pending request; response IDs are DATA.
 /// Every raw member, including ignored provider extensions, and every argument JSON string
@@ -147,7 +182,7 @@ pub fn normalize_chat_completion(
         max_collection_entries: limits.max_collection_entries,
     };
     let body = json::parse(bytes, &bounds)?;
-    if string(&body, "model")? != model {
+    if !model_matches(model, string(&body, "model")?) {
         return Err(NormalizeError::Model);
     }
     if !body.get("error").is_none_or(Value::is_null) {
@@ -269,5 +304,6 @@ pub fn normalize_chat_completion(
         .transpose()?;
     Ok(NormalizedReply { bytes, reasoning })
 }
+
 #[cfg(test)]
 mod tests;

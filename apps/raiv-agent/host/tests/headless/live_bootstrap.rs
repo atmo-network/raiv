@@ -1,5 +1,7 @@
 //! New independently configured live genesis uses actual guest; no credentials/inference/dispatch.
+
 use super::*;
+
 fn live(source: String) -> String {
     source
         .replace("\nid=", "\nmandate=\"Assist the operator.\"\nid=")
@@ -19,6 +21,7 @@ max_stream_event_bytes=65536
 max_stream_events=4096"#,
         )
 }
+
 fn no_credential(kind: &str, path: &Path) -> Output {
     Command::new(env!("CARGO_BIN_EXE_raiv-agent"))
         .env_remove("OPENCODE_API_KEY")
@@ -27,6 +30,7 @@ fn no_credential(kind: &str, path: &Path) -> Output {
         .output()
         .unwrap()
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_executable_live_bootstrap_is_key_free_exact_new_definition_and_never_scripted_bypass() {
@@ -38,6 +42,7 @@ fn real_executable_live_bootstrap_is_key_free_exact_new_definition_and_never_scr
         bootstrap_profile(effort);
     }
 }
+
 fn bootstrap_profile(effort: Option<guest::ReasoningEffort>) {
     use raiv::limits::Limits;
     let module = PathBuf::from(std::env::var_os("RAIV_GUEST_WASM").expect("actual guest"));

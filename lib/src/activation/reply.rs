@@ -20,21 +20,25 @@ pub enum ReplyError {
     DefinitionMismatch,
     Inference(InferenceError),
 }
+
 impl From<CodecError> for ReplyError {
     fn from(error: CodecError) -> Self {
         Self::Codec(error)
     }
 }
+
 impl From<UsageError> for ReplyError {
     fn from(error: UsageError) -> Self {
         Self::Usage(error)
     }
 }
+
 impl From<InferenceError> for ReplyError {
     fn from(error: InferenceError) -> Self {
         Self::Inference(error)
     }
 }
+
 impl fmt::Display for ReplyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -50,6 +54,7 @@ impl fmt::Display for ReplyError {
         })
     }
 }
+
 impl core::error::Error for ReplyError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
@@ -67,6 +72,7 @@ pub struct CallMeta<'a> {
     pub call_id: &'a str,
     pub tool_id: &'a str,
 }
+
 /// A selected single call with a canonical model Map. Application validation, registered
 /// control/version/authority, budget/units and execution remain required above this view.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -74,18 +80,20 @@ pub struct ToolCall<'a> {
     meta: CallMeta<'a>,
     arguments: &'a [u8],
 }
+
 impl<'a> ToolCall<'a> {
     pub fn meta(self) -> CallMeta<'a> {
         self.meta
     }
+
     pub fn arguments_bytes(self) -> &'a [u8] {
         self.arguments
     }
 }
 
 /// Borrowed normalizer-v1 reply data. It is not one of the six checkpoint block kinds.
-/// The closed canonical CBOR schema is {text:Text, calls:list<Call>, usage:Usage,
-/// request_id:u64}; Call is {call_id:Text, tool_id:Text, arguments:opaque DRISL value}.
+/// The closed canonical CBOR schema is `{text:Text, calls:list<Call>, usage:Usage,
+/// request_id:u64}`; Call is `{call_id:Text, tool_id:Text, arguments:opaque DRISL value}`.
 /// Opaque arguments are NOT accepted model data until control_call succeeds. This permits
 /// rejecting all multi-call IDs without selecting even a valid first call or materializing
 /// an invalid later argument. The complete wire/metadata/Usage schema always preflights.
@@ -100,6 +108,7 @@ pub struct ModelReply<'a> {
     count: u64,
     bounds: DecodeLimits,
 }
+
 impl<'a> ModelReply<'a> {
     /// Caller supplies authorized reply/depth/count limits. max_model_reply_bytes covers
     /// the whole ephemeral frame; max_block_bytes does not cap this non-block object.
@@ -136,22 +145,28 @@ impl<'a> ModelReply<'a> {
             bounds,
         })
     }
+
     pub fn as_bytes(&self) -> &'a [u8] {
         self.bytes
     }
+
     pub fn request_id(&self) -> u64 {
         self.request_id
     }
+
     pub fn text(&self) -> &'a str {
         self.text
     }
+
     /// Report data only. It never overrides Core call counts or estimates null costs as zero.
     pub fn usage(&self) -> Usage {
         self.usage
     }
+
     pub fn call_count(&self) -> u64 {
         self.count
     }
+
     /// All native call metadata, including rejected multi-calls, in provider order.
     /// No argument/handler selection or payload ownership occurs in this iterator.
     pub fn calls(&self) -> impl Iterator<Item = CallMeta<'a>> + 'a {
@@ -166,6 +181,7 @@ impl<'a> ModelReply<'a> {
                 .expect("validated call metadata")
             })
     }
+
     /// Cardinality precedes argument processing. None is the complete reply's intrinsic
     /// Finish decision; MultipleToolCalls rejects ALL, never a selected first call.
     /// Limits are the immutable decoder-captured bounds, with no later widening/truncation.
@@ -193,6 +209,7 @@ impl<'a> ModelReply<'a> {
         }))
     }
 }
+
 impl InferenceSession {
     /// Correlate before parsing and consume only a complete bounded normalizer-v1 frame.
     /// The body's request ID must also match. Definition/caller reply/depth/count ceilings
@@ -234,6 +251,7 @@ fn call_fields(call: ValueView<'_>) -> Result<[ValueView<'_>; 3], ReplyError> {
     call.fields(["call_id", "tool_id", "arguments"])
         .map_err(|_| ReplyError::InvalidSchema)
 }
+
 fn call_meta<'a>(fields: &[ValueView<'a>; 3]) -> Result<CallMeta<'a>, ReplyError> {
     Ok(CallMeta {
         call_id: fields[0].text().map_err(|_| ReplyError::InvalidSchema)?,

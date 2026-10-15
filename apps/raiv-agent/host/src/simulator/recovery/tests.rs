@@ -5,6 +5,7 @@ use crate::{
     tests::activation::{admission, output},
 };
 use raiv::format::DecodeLimits;
+
 fn limits() -> LocalExecutorLimits {
     LocalExecutorLimits {
         executor: checkpoint::ExecutorLimits {
@@ -19,6 +20,7 @@ fn limits() -> LocalExecutorLimits {
         caller: Limits::default(),
     }
 }
+
 #[test]
 fn empty_genesis_pin_is_exact_paired_data_adoption_keeps_new_origin_and_nonempty_destination_is_never_merged(
 ) {
@@ -74,6 +76,7 @@ fn empty_genesis_pin_is_exact_paired_data_adoption_keeps_new_origin_and_nonempty
     ));
     assert_eq!(recovered.entries[0].record(), before);
 }
+
 #[test]
 fn missing_conflicting_pins_or_source_and_corrupt_files_refuse_without_destination_or_file_repair()
 {

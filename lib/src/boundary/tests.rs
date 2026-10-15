@@ -11,12 +11,15 @@ fn hex(text: &str) -> Vec<u8> {
         .map(|i| u8::from_str_radix(&text[i..i + 2], 16).unwrap())
         .collect()
 }
+
 fn fixtures() -> Value {
     serde_json::from_str(include_str!("../../../fixtures/format/boundary.json")).unwrap()
 }
+
 fn record(index: usize) -> Cbor {
     node(&fixtures()[index]["record"])
 }
+
 fn encode(boundary: &Boundary, limits: &Limits) -> Result<Boundary, BoundaryError> {
     let command = match boundary.exit() {
         Exit::AwaitActor => None,

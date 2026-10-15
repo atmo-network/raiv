@@ -12,10 +12,12 @@ struct Node<'a> {
     count: usize,
     major: u8,
 }
+
 struct Edge<'a> {
     key: Option<&'a str>,
     node: usize,
 }
+
 impl<'a> Node<'a> {
     fn new(base: Option<ValueView<'a>>, patch: Option<ValueView<'a>>) -> Self {
         Self {
@@ -26,11 +28,13 @@ impl<'a> Node<'a> {
             major: 0,
         }
     }
+
     fn value(&self) -> ValueView<'a> {
         self.patch
             .or(self.base)
             .expect("every plan node has a source")
     }
+
     fn empty_object(&self) -> bool {
         self.major == 5 && self.count == 0
     }

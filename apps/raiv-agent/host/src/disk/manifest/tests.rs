@@ -8,8 +8,11 @@ use std::{
     },
     process::Command,
 };
+
 const OLD: &[u8] = &[0xa1, 0x61, b'x', 0x01];
+
 const NEXT: &[u8] = &[0xa1, 0x61, b'x', 0x02];
+
 fn metadata(disk: &mut DiskBlockStore, slot: u8) -> ManifestFile<'_> {
     match slot {
         0 => disk.manifest(DecodeLimits::default()),
@@ -18,6 +21,7 @@ fn metadata(disk: &mut DiskBlockStore, slot: u8) -> ManifestFile<'_> {
         _ => panic!("unknown test metadata slot"),
     }
 }
+
 #[test]
 fn bounded_canonical_exact_byte_cas_reopen_idempotence_and_ignored_orphans() {
     let directory = Directory::new();
@@ -71,6 +75,7 @@ fn bounded_canonical_exact_byte_cas_reopen_idempotence_and_ignored_orphans() {
     ));
     assert_eq!(fs::read(path).unwrap(), NEXT);
 }
+
 #[test]
 fn corrupt_symlink_nonregular_metadata_never_becomes_absence_or_gets_replaced() {
     let directory = Directory::new();
@@ -99,6 +104,7 @@ fn corrupt_symlink_nonregular_metadata_never_becomes_absence_or_gets_replaced() 
         assert_eq!(fs::read(&path).unwrap(), bytes);
     }
 }
+
 #[test]
 fn injected_failures_preserve_old_before_rename_and_report_unknown_after_attempt() {
     for (executor, at) in [0, 1, 2].into_iter().flat_map(|executor| {
@@ -147,6 +153,7 @@ fn injected_failures_preserve_old_before_rename_and_report_unknown_after_attempt
         assert_eq!(fs::read_dir(&directory.0).unwrap().count(), 1);
     }
 }
+
 #[test]
 #[ignore = "owned-child process suite: run separately with test-host.sh, never alongside FD/lock tests"]
 fn process_termination_leaves_complete_old_or_new_metadata() {

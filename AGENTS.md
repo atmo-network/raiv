@@ -33,6 +33,9 @@ Raiv preserves an agent's behavioral continuity across short executions through 
 
 - `Guest/host boundary`: Only the raiv-agent native host may use Rust std. Core and the isolated Rust wasm32v1-none guest remain no_std + alloc. Wasmi 2.x without WASI, HTTPS/JSON/SSE, filesystem/config/environment access, Ratatui/Crossterm and simulated external effects belong to the host. The guest owns decisions, context, tools and state transitions. Introduce host dependencies only at the application milestone, never into Core's graph. Guest integration must prove the bounded versioned CBOR ABI, retained activation across inference and native/WASM equality.
 - `Typed ownership`: Keep codec implementations private to format and typed schemas with their domain owners. Retain minicbor, fixed-profile CID and typed records; do not introduce a universal runtime IPLD Value/registry. No IPLD/CID dependency crates may appear in normal/build/dev graphs. Tests use the independent Ciborium oracle.
+- `Pinned sessions`: A local session keeps its own guest module, configuration and grant plan; newer builds never rebind or widen it. Guest profile changes must be additive: never change the bytes of an existing profile's Definition (policy, tool descriptors, inference profile) while the host derives Definitions from compiled profiles; add a new profile instead. Verify with the fixture generators' `--check` and the profile byte tests.
+- `Item spacing`: Separate Rust items with one blank line at module, `impl` and `trait` level (functions, types, constants, `impl` blocks, modules with bodies); keep consecutive `use` statements and `mod name;` declarations grouped, and put a blank line after `//!` module docs. rustfmt keeps but never inserts these lines, so preserve them when editing.
+- `Tooling languages`: Rust for code and tests, Bash for scripts; no Python. Fixture vectors are frozen golden data: new vectors are assembled with the independent test-only Ciborium oracle and checked by `fixture_tests`, never produced from Raiv's own encoder output.
 - `Wire preservation`: Private codec simplification must preserve canonical bytes, strict bounds, validation-before-ownership and model/runtime separation. A package/document version bump alone must not change wire formats, hash domains or golden fixtures. Any copied n0-computer/dasl code must retain its upstream license/attribution.
 
 ### Context and change discipline
@@ -43,7 +46,7 @@ Raiv preserves an agent's behavioral continuity across short executions through 
 
 ## Validation
 
-Run the applicable library gates after code changes; context-only changes require documentation/link/structure validation, not repetition of unchanged Rust evidence.
+Run the applicable library gates after code changes; context-only changes require documentation/link/structure validation (`bash .github/scripts/check-links.sh`), not repetition of unchanged Rust evidence.
 
 ```sh
 cargo test --locked
@@ -52,6 +55,8 @@ cargo fmt --check
 cargo check --locked --lib --target wasm32-unknown-unknown
 cargo check --locked --lib --target thumbv7em-none-eabi
 cargo tree --locked --target wasm32-unknown-unknown -e features --edges normal,build
+RUSTDOCFLAGS="-D warnings" cargo doc --locked -p raiv --no-deps
+bash .github/scripts/check-links.sh
 cargo +1.85.0 test --locked
 cargo +1.85.0 clippy --locked --all-targets -- -D warnings
 cargo +1.85.0 fmt --check
@@ -59,6 +64,6 @@ cargo +1.85.0 check --locked --lib --target wasm32-unknown-unknown
 cargo +1.85.0 check --locked --lib --target thumbv7em-none-eabi
 ```
 
-Application build/runtime/MSRV commands live in apps/raiv-agent/README.md; ordinary Core tests do not execute the ignored Wasmi runtime tests.
+Application build/runtime/MSRV commands live in apps/raiv-agent/README.md; ordinary Core tests do not execute the ignored Wasmi runtime tests. After application changes also run `sh apps/raiv-agent/test-host.sh` (with `RAIV_GUEST_WASM`) and `bash apps/raiv-agent/test-run.sh --native`. Live provider checks spend real credentials and are run only when the owner asks.
 
 A wasm32 compile check is not sandbox execution or JAM readiness. Missing or blocked validation remains unproven; do not bypass an owner-gated policy decision to manufacture a passing result.

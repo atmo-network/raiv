@@ -34,9 +34,11 @@ pub(super) fn incoming(snapshot: &RestoredAgent) -> Cbor {
     }
     input
 }
+
 pub(super) fn input(value: &Cbor) -> ActivationInput {
     ActivationInput::decode(&encode(value), &Limits::default()).unwrap()
 }
+
 fn trajectory(value: Cbor) -> ModelValue {
     ModelValue::decode(
         &encode(&value),
@@ -47,9 +49,11 @@ fn trajectory(value: Cbor) -> ModelValue {
     )
     .unwrap()
 }
+
 fn empty() -> ModelValue {
     trajectory(Cbor::Array(vec![]))
 }
+
 fn position(value: &Cbor) -> Cbor {
     let mut result = value.clone();
     map_mut(&mut result).insert("domain".into(), encoding::text_id(field(value, "domain")));
@@ -62,6 +66,7 @@ fn position(value: &Cbor) -> Cbor {
     }
     result
 }
+
 fn prefix(snapshot: &RestoredAgent, input: &Cbor) -> Vec<Cbor> {
     let definition = cbor(snapshot.definition().as_bytes());
     let Cbor::Array(tools) = field(&definition, "tools") else {
@@ -155,6 +160,7 @@ fn prefix(snapshot: &RestoredAgent, input: &Cbor) -> Vec<Cbor> {
     ]));
     sections
 }
+
 pub(super) fn oracle(snapshot: &RestoredAgent, input: &Cbor, trajectory: &Cbor) -> Cbor {
     let mut sections = prefix(snapshot, input);
     sections.push(Cbor::Map(vec![

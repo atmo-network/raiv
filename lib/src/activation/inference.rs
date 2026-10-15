@@ -13,6 +13,7 @@ pub struct RequestBinding {
     pub instance_id: Id32,
     pub request_id: u64,
 }
+
 /// One sequence owned by a live instance, carried across its successive Activations.
 /// Create once for a fresh instance; do not recreate/reset it with the same instance label.
 /// Sealed/failed sessions return the non-Clone sequence, preserving the last issued ID.
@@ -21,6 +22,7 @@ pub struct RequestSequence {
     instance: Id32,
     last: u64,
 }
+
 impl RequestSequence {
     pub fn new(instance_id: Id32) -> Self {
         Self {
@@ -28,13 +30,16 @@ impl RequestSequence {
             last: 0,
         }
     }
+
     pub fn instance_id(&self) -> Id32 {
         self.instance
     }
+
     pub fn last_id(&self) -> u64 {
         self.last
     }
 }
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum InferencePhase {
     Ready,
@@ -45,6 +50,7 @@ pub enum InferencePhase {
     Failed,
     Released,
 }
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum InferenceError {
     WrongPhase,
@@ -54,11 +60,13 @@ pub enum InferenceError {
     Counts(CallBudgetError),
     Units(UnitError),
 }
+
 impl From<CallBudgetError> for InferenceError {
     fn from(error: CallBudgetError) -> Self {
         Self::Counts(error)
     }
 }
+
 impl fmt::Display for InferenceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -71,6 +79,7 @@ impl fmt::Display for InferenceError {
         })
     }
 }
+
 impl core::error::Error for InferenceError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
@@ -95,6 +104,7 @@ pub struct InferenceSession {
     budget: CallBudget,
     phase: InferencePhase,
 }
+
 impl InferenceSession {
     pub fn new(sequence: RequestSequence, budget: CallBudget) -> Self {
         Self {
@@ -103,12 +113,15 @@ impl InferenceSession {
             phase: InferencePhase::Ready,
         }
     }
+
     pub fn phase(&self) -> InferencePhase {
         self.phase
     }
+
     pub fn budget(&self) -> &CallBudget {
         &self.budget
     }
+
     /// Stable pending view. Reading it never consumes a count or generates another ID.
     pub fn pending_request(&self) -> Option<RequestBinding> {
         match self.phase {
@@ -116,6 +129,7 @@ impl InferenceSession {
             _ => None,
         }
     }
+
     /// Count-admit exactly one request before inference dispatch. Wrong phase does not
     /// mutate state. Count exhaustion or ID overflow fails the run with no pending request.
     pub fn issue(&mut self) -> Result<RequestBinding, InferenceError> {
@@ -139,6 +153,7 @@ impl InferenceSession {
         self.phase = InferencePhase::Awaiting(key);
         Ok(key)
     }
+
     /// Atomic count/nonce/unit admission for a trusted profile's upper-bound quote.
     /// Wrong phase/packet preserves all state; insufficient units fails without issuing,
     /// count/nonce refusal leaves units unspent. Reservation precedes external inference;
@@ -156,6 +171,7 @@ impl InferenceSession {
         units.commit(quote);
         Ok(key)
     }
+
     /// Pure correlation preflight. Wrong/stale/duplicate/other-instance keys preserve the
     /// exact pending request and spent model counts; they are not inference failures.
     pub fn check_response(&self, key: RequestBinding) -> Result<(), InferenceError> {
@@ -170,6 +186,7 @@ impl InferenceSession {
         }
         Ok(())
     }
+
     /// Consume matching correlation once, only after complete normalized-reply preflight.
     /// This does not validate text, Usage, calls/cardinality or arguments itself.
     pub fn accept_reply(&mut self, key: RequestBinding) -> Result<(), InferenceError> {
@@ -177,6 +194,7 @@ impl InferenceSession {
         self.phase = InferencePhase::ReplyReady;
         Ok(())
     }
+
     /// A matching provider failure is fatal, not an action Receipt or implicit Finish.
     /// Its already issued model slot stays spent; wrong keys leave the request pending.
     pub fn inference_error(&mut self, key: RequestBinding) -> Result<(), InferenceError> {
@@ -184,6 +202,7 @@ impl InferenceSession {
         self.phase = InferencePhase::Failed;
         Ok(())
     }
+
     /// Apply an already validated single registered decision AFTER required local checks.
     /// A refused control debit leaves ReplyReady for bounded correction; successful terminal
     /// control seals this session, but does not prove or construct a CommitCandidate.
@@ -198,6 +217,7 @@ impl InferenceSession {
         };
         Ok(())
     }
+
     /// Atomic count/control/unit guard before an already validated registered operation.
     /// A count refusal leaves ReplyReady/units intact; unit exhaustion fails the run without
     /// sealing a candidate. Quote authenticity, arguments/output/context and actual effects
@@ -216,6 +236,7 @@ impl InferenceSession {
         units.commit(quote);
         Ok(())
     }
+
     fn check_units(&mut self, units: &UnitBudget, quote: u64) -> Result<(), InferenceError> {
         if let Err(error) = units.check(self.budget.binding(), quote) {
             if error == UnitError::Exhausted {
@@ -225,6 +246,7 @@ impl InferenceSession {
         }
         Ok(())
     }
+
     /// Text/invalid-control recovery is bounded per Activation. Exhaustion fails the run
     /// without sealing a candidate or inventing Finish; model counts already spent remain.
     pub fn corrective_turn(&mut self) -> Result<(), InferenceError> {
@@ -238,6 +260,7 @@ impl InferenceSession {
         self.phase = InferencePhase::Ready;
         Ok(())
     }
+
     /// Internal callback admission charges Continue before work; Yield action count waits
     /// for valid planned Command output. Unit quotes stay spent on failed admitted work.
     pub(crate) fn begin_execution(
@@ -264,6 +287,7 @@ impl InferenceSession {
         self.phase = InferencePhase::Executing(control);
         Ok(())
     }
+
     pub(crate) fn complete_execution(&mut self) -> Result<(), InferenceError> {
         let InferencePhase::Executing(control) = self.phase else {
             return Err(InferenceError::WrongPhase);
@@ -278,6 +302,7 @@ impl InferenceSession {
         };
         Ok(())
     }
+
     pub(crate) fn failed_execution(&mut self) -> Result<(), InferenceError> {
         if !matches!(self.phase, InferencePhase::Executing(_)) {
             return Err(InferenceError::WrongPhase);
@@ -285,9 +310,11 @@ impl InferenceSession {
         self.phase = InferencePhase::ReplyReady;
         self.corrective_turn()
     }
+
     pub(crate) fn abort(&mut self) {
         self.phase = InferencePhase::Failed;
     }
+
     /// Return the unchanged live-instance sequence only after terminal control/failure.
     /// The runtime must resolve candidate acceptance before starting another Activation;
     /// this extraction does not acknowledge host acceptance. Nonterminal refusal leaves
@@ -305,6 +332,7 @@ impl InferenceSession {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn final_u64_request_is_issued_once_and_overflow_does_not_debit_another_model_slot() {
         let root = crate::format::DaslCid::for_block(crate::format::DaslCodec::Drisl, &[0xa0]);

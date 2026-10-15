@@ -1,16 +1,20 @@
 //! Explicit paired main/primary-world approval. No auto-submit, old capabilities,
 //! pin selection/retention, Core-store-loss reconciliation or external world provenance.
+
 use super::*;
 use raiv::format::{DaslCid, DaslCodec};
+
 /// Independently selected native metadata, NOT cryptographic approval or currentness.
 #[derive(Clone, Copy, Debug)]
 pub struct WorldRecoveryPin {
     pub source: LocalRecoveryPin,
     pub world_digest: Id32,
 }
+
 fn digest(bytes: &[u8]) -> Id32 {
     DaslCid::for_block(DaslCodec::Raw, bytes).digest()
 }
+
 impl<'a> ScriptedWorld<'a> {
     /// Export only already approved RAM/session and exact file/source agreement.
     /// This acknowledges DATA; it cannot choose independently approved current pins.
@@ -58,6 +62,7 @@ impl<'a> ScriptedWorld<'a> {
             world_digest: digest(&bytes),
         })
     }
+
     /// Construct a NEW native session from independently approved exact paired pins.
     /// Main Registry/AdmissionBook must already be independently restored/approved.
     /// No merge, balance reset, capability deserialization, ticket or auto-submit. All

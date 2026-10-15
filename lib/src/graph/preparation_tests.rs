@@ -7,14 +7,17 @@ use crate::{
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 static CALLBACKS: AtomicUsize = AtomicUsize::new(0);
+
 fn validate(_: &[u8]) -> Result<(), ToolFailure> {
     CALLBACKS.fetch_add(1, Ordering::SeqCst);
     Err(ToolFailure::InvalidArguments)
 }
+
 fn plan(_: PlanningContext<'_>, _: &[u8]) -> Result<crate::format::ModelValue, ToolFailure> {
     CALLBACKS.fetch_add(1, Ordering::SeqCst);
     Err(ToolFailure::PlanningFailed)
 }
+
 pub(super) fn registrations(definition: &Definition) -> Vec<ToolRegistration<'_>> {
     definition
         .tools()
@@ -34,6 +37,7 @@ pub(super) fn registrations(definition: &Definition) -> Vec<ToolRegistration<'_>
         })
         .collect()
 }
+
 fn binding(snapshot: &RestoredAgent, source: &Cbor) -> InputBinding {
     let Cbor::Bytes(event) = field(source, "event_id") else {
         panic!("event")
@@ -47,6 +51,7 @@ fn binding(snapshot: &RestoredAgent, source: &Cbor) -> InputBinding {
         admitted_input_digest: Sha256::digest(encode(source)).into(),
     }
 }
+
 pub(super) fn packet(snapshot: &RestoredAgent, source: &Cbor) -> PreparedInput {
     PreparedInput::new(binding(snapshot, source), full_context::input(source)).unwrap()
 }

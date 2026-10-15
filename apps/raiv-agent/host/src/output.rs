@@ -1,4 +1,5 @@
 //! Borrowed closed guest output DATA; neither authenticated execution nor a dispatch permit.
+
 use minicbor::Decoder;
 use raiv::{
     definition::{ToolControl, ToolDescriptorView},
@@ -17,6 +18,7 @@ pub enum DecodeError {
     Integrity,
     Allocation,
 }
+
 impl fmt::Display for DecodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -28,7 +30,9 @@ impl fmt::Display for DecodeError {
         })
     }
 }
+
 impl std::error::Error for DecodeError {}
+
 #[derive(Clone, Copy)]
 pub enum Output<'a> {
     Initialized {
@@ -44,34 +48,41 @@ pub enum Output<'a> {
         code: &'a str,
     },
 }
+
 #[derive(Clone, Copy)]
 pub struct Block<'a> {
     pub cid: DaslCid,
     pub body: &'a [u8],
 }
+
 #[derive(Clone, Copy)]
 pub struct Blocks<'a> {
     bytes: &'a [u8],
     len: u64,
 }
+
 impl<'a> Blocks<'a> {
     pub fn len(self) -> u64 {
         self.len
     }
+
     pub fn is_empty(self) -> bool {
         self.len == 0
     }
+
     pub fn iter(self) -> impl Iterator<Item = Block<'a>> {
         list(self.bytes)
             .expect("validated blocks")
             .map(|bytes| block(bytes).expect("validated block"))
     }
 }
+
 impl MaterializedBlocks for Blocks<'_> {
     fn get(&self, cid: DaslCid) -> Option<&[u8]> {
         self.iter().find(|b| b.cid == cid).map(|b| b.body)
     }
 }
+
 #[derive(Clone, Copy)]
 pub struct Request<'a> {
     context: &'a [u8],
@@ -79,22 +90,27 @@ pub struct Request<'a> {
     tools: &'a [u8],
     limits: Limits,
 }
+
 impl<'a> Request<'a> {
     pub fn context_bytes(self) -> &'a [u8] {
         self.context
     }
+
     pub fn model_parameters_bytes(self) -> &'a [u8] {
         self.parameters
     }
+
     pub fn limits(self) -> Limits {
         self.limits
     }
+
     pub fn tools(self) -> impl Iterator<Item = ToolDescriptorView<'a>> {
         list(self.tools)
             .expect("validated tools")
             .map(|b| tool(b).expect("validated tool"))
     }
 }
+
 #[derive(Clone, Copy)]
 pub struct Candidate<'a> {
     agent: [u8; 32],
@@ -106,32 +122,41 @@ pub struct Candidate<'a> {
     blocks: Blocks<'a>,
     disposition: Continuation,
 }
+
 impl<'a> Candidate<'a> {
     pub fn agent_id(self) -> [u8; 32] {
         self.agent
     }
+
     pub fn expected_revision(self) -> u64 {
         self.revision
     }
+
     pub fn expected_root(self) -> DaslCid {
         self.expected
     }
+
     pub fn admitted_event_id(self) -> [u8; 32] {
         self.event
     }
+
     pub fn admitted_input_digest(self) -> [u8; 32] {
         self.digest
     }
+
     pub fn new_root(self) -> DaslCid {
         self.root
     }
+
     pub fn new_blocks(self) -> Blocks<'a> {
         self.blocks
     }
+
     pub fn disposition(self) -> Continuation {
         self.disposition
     }
 }
+
 impl<'a> Output<'a> {
     pub fn decode(bytes: &'a [u8], caller: &Limits) -> Result<Self, DecodeError> {
         preflight(bytes)?;
@@ -203,6 +228,7 @@ impl<'a> Output<'a> {
         }
     }
 }
+
 fn preflight(bytes: &[u8]) -> Result<(), DecodeError> {
     if bytes.len() > super::MAX_FRAME_BYTES {
         return Err(DecodeError::Limit);
@@ -244,6 +270,7 @@ fn preflight(bytes: &[u8]) -> Result<(), DecodeError> {
     }
     Ok(())
 }
+
 fn fields<'a, const N: usize>(
     bytes: &'a [u8],
     keys: [&str; N],
@@ -271,29 +298,35 @@ fn fields<'a, const N: usize>(
     }
     Ok(found.map(|v| v.expect("exact unique field set")))
 }
+
 fn unsigned(bytes: &[u8]) -> Result<u64, DecodeError> {
     Decoder::new(bytes)
         .u64()
         .map_err(|_| DecodeError::Malformed)
 }
+
 fn text(bytes: &[u8]) -> Result<&str, DecodeError> {
     Decoder::new(bytes)
         .str()
         .map_err(|_| DecodeError::Malformed)
 }
+
 fn raw(bytes: &[u8]) -> Result<&[u8], DecodeError> {
     Decoder::new(bytes)
         .bytes()
         .map_err(|_| DecodeError::Malformed)
 }
+
 fn id32(bytes: &[u8]) -> Result<[u8; 32], DecodeError> {
     raw(bytes)?.try_into().map_err(|_| DecodeError::Malformed)
 }
+
 fn cid(bytes: &[u8]) -> Result<DaslCid, DecodeError> {
     DaslCid::from_bytes(raw(bytes)?)
         .and_then(DaslCid::require_state)
         .map_err(|_| DecodeError::Malformed)
 }
+
 fn list(bytes: &[u8]) -> Result<impl Iterator<Item = &[u8]>, DecodeError> {
     let mut d = Decoder::new(bytes);
     let len = d
@@ -306,6 +339,7 @@ fn list(bytes: &[u8]) -> Result<impl Iterator<Item = &[u8]>, DecodeError> {
         &bytes[start..d.position()]
     }))
 }
+
 fn block(bytes: &[u8]) -> Result<Block<'_>, DecodeError> {
     let [key, body] = fields(bytes, ["cid", "body"])?;
     Ok(Block {
@@ -313,6 +347,7 @@ fn block(bytes: &[u8]) -> Result<Block<'_>, DecodeError> {
         body: raw(body)?,
     })
 }
+
 fn blocks<'a>(bytes: &'a [u8], caller: &Limits, sorted: bool) -> Result<Blocks<'a>, DecodeError> {
     let len = Decoder::new(bytes)
         .array()
@@ -348,6 +383,7 @@ fn blocks<'a>(bytes: &'a [u8], caller: &Limits, sorted: bool) -> Result<Blocks<'
     }
     Ok(Blocks { bytes, len })
 }
+
 fn request_view<'a>(bytes: &'a [u8], caller: &Limits) -> Result<Request<'a>, DecodeError> {
     let [version, context, parameters, tools, limits] = fields(
         bytes,
@@ -412,6 +448,7 @@ fn request_view<'a>(bytes: &'a [u8], caller: &Limits) -> Result<Request<'a>, Dec
         limits,
     })
 }
+
 fn tool(bytes: &[u8]) -> Result<ToolDescriptorView<'_>, DecodeError> {
     let [id, version, control, description, schema, authority] = fields(
         bytes,
@@ -447,6 +484,7 @@ fn tool(bytes: &[u8]) -> Result<ToolDescriptorView<'_>, DecodeError> {
         authority_binding,
     })
 }
+
 fn continuation(bytes: &[u8]) -> Result<Continuation, DecodeError> {
     let mut d = Decoder::new(bytes);
     let count = d

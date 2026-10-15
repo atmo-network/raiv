@@ -22,6 +22,7 @@ pub enum EpisodeRoleError {
     EmptyEpisode(DaslCid),
     UnexpectedExit(DaslCid),
 }
+
 impl fmt::Display for EpisodeRoleError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -41,6 +42,7 @@ impl fmt::Display for EpisodeRoleError {
         }
     }
 }
+
 impl core::error::Error for EpisodeRoleError {}
 
 /// Identity binding within inspected bytes, not host provenance or authorized registration.
@@ -52,6 +54,7 @@ pub enum IdentityError {
     PendingActionMismatch(DaslCid),
     ActionIndexOverflow(DaslCid),
 }
+
 impl fmt::Display for IdentityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -77,6 +80,7 @@ impl fmt::Display for IdentityError {
         }
     }
 }
+
 impl core::error::Error for IdentityError {}
 
 /// Episode ordering/cause/receipt pairing errors, not host provenance or full policy checks.
@@ -88,6 +92,7 @@ pub enum TransitionError {
     SubsequentInputCause(DaslCid),
     ReceiptMismatch(DaslCid),
 }
+
 impl fmt::Display for TransitionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -112,6 +117,7 @@ impl fmt::Display for TransitionError {
         }
     }
 }
+
 impl core::error::Error for TransitionError {}
 
 /// Declared memory-link consistency, not provenance, patch correctness or full restoration.
@@ -121,6 +127,7 @@ pub enum MemoryConsistencyError {
     EntryMismatch(DaslCid),
     RootMismatch(DaslCid),
 }
+
 impl fmt::Display for MemoryConsistencyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -138,6 +145,7 @@ impl fmt::Display for MemoryConsistencyError {
         }
     }
 }
+
 impl core::error::Error for MemoryConsistencyError {}
 
 /// Declared revision/retention consistency, not accepted lineage or lifetime accounting.
@@ -149,6 +157,7 @@ pub enum HistoryConsistencyError {
     RevisionTooSmall(DaslCid),
     IncompleteWindow(DaslCid),
 }
+
 impl fmt::Display for HistoryConsistencyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -171,6 +180,7 @@ impl fmt::Display for HistoryConsistencyError {
         }
     }
 }
+
 impl core::error::Error for HistoryConsistencyError {}
 
 /// Accepted counter ceilings only; not cost conversion, admission or lifetime accounting.
@@ -181,6 +191,7 @@ pub enum UsageLimitError {
     EpisodeModelCalls(DaslCid),
     EpisodeActions(DaslCid),
 }
+
 impl fmt::Display for UsageLimitError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -203,6 +214,7 @@ impl fmt::Display for UsageLimitError {
         }
     }
 }
+
 impl core::error::Error for UsageLimitError {}
 
 /// Declared per-input call/action grants, not admission provenance, units or freshness.
@@ -211,6 +223,7 @@ pub enum AdmissionGrantError {
     ModelCalls(DaslCid),
     Action(DaslCid),
 }
+
 impl fmt::Display for AdmissionGrantError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -225,6 +238,7 @@ impl fmt::Display for AdmissionGrantError {
         }
     }
 }
+
 impl core::error::Error for AdmissionGrantError {}
 
 /// Command/declared-descriptor equality, not authorized registration or argument validation.
@@ -235,6 +249,7 @@ pub enum ToolBindingError {
     VersionMismatch(DaslCid),
     AuthorityMismatch(DaslCid),
 }
+
 impl fmt::Display for ToolBindingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -250,6 +265,7 @@ impl fmt::Display for ToolBindingError {
         }
     }
 }
+
 impl core::error::Error for ToolBindingError {}
 
 /// Complete hash/schema-checked required block set, NOT a restored runnable agent.
@@ -779,6 +795,7 @@ enum Kind {
     Boundary,
     Input,
 }
+
 #[derive(Clone, Copy)]
 struct Target(DaslCid, Kind);
 
@@ -787,6 +804,7 @@ struct Node {
     cid: DaslCid,
     block: Block,
 }
+
 #[derive(Debug, Eq, PartialEq)]
 enum Block {
     State(AgentState),
@@ -796,6 +814,7 @@ enum Block {
     Boundary(Boundary),
     Input(ActivationInput),
 }
+
 impl Node {
     fn kind(&self) -> Kind {
         match self.block {
@@ -807,6 +826,7 @@ impl Node {
             Block::Input(_) => Kind::Input,
         }
     }
+
     fn bytes(&self) -> &[u8] {
         match &self.block {
             Block::State(v) => v.as_bytes(),

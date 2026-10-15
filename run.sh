@@ -10,8 +10,10 @@ case "${1:-}" in
         printf '%s\n' 'Usage: ./run.sh [session-directory]' \
             '       ./run.sh --status [session-directory]' \
             '       ./run.sh --build' \
-            'Linux interactive Go/high demo. Defaults: var/raiv/chat; 1024 tokens, 2 prompts, <=6 calls, no actions.' \
-            'Requires OPENCODE_API_KEY in the environment. No inference until Enter in the UI.'
+            'Linux interactive demo. New-session defaults: var/raiv/chat; 20 prompts/launch, <=3 calls each, 4096 tokens/60s, no actions.' \
+            'Provider: OpenCode Go deepseek-v4.1-flash/high with OPENCODE_API_KEY. For a NEW session,' \
+            'RAIV_PROVIDER=openai-compatible selects qwen3.8-flash on the same endpoint; override with' \
+            'RAIV_BASE_URL, RAIV_MODEL and RAIV_API_KEY_ENV (a variable name). No inference until Enter in the UI.'
         exit 0 ;;
     --build|--status) MODE=${1#--}; shift ;;
     -*) printf 'Unknown option. Use --help.\n' >&2; exit 2 ;;
@@ -29,7 +31,7 @@ PLAN='activation_units = "100"
 remaining_episode_units = "100"
 remaining_model_calls = "3"
 remaining_actions = "0"
-max_events = "2"'
+max_events = "20"'
 fail() { printf '%s\n' "$*" >&2; exit 1; }
 digest() { sha256sum < "$1" | cut -d ' ' -f 1; }
 field() {
@@ -40,22 +42,42 @@ field() {
     [[ $count == 1 ]] || fail "Missing/duplicate native status field: $1"
     printf '%s\n' "$value"
 }
+# One `key = "value"` or `key = value` line of a session TOML file, unquoted.
+setting() {
+    local value
+    value=$(grep -E "^$1 = " "$2" | head -n 1) || fail "Missing session setting: $1"
+    value=${value#*= }
+    value=${value#\"}
+    printf '%s\n' "${value%\"}"
+}
 cd -- "$ROOT"
 trap 'printf "Stopped. No automatic retry or repair. Session: %s\n" "$SESSION" >&2' ERR
+# The credential variable NAME comes from an existing session, else from the new-session selection.
+PROVIDER=${RAIV_PROVIDER:-opencode-go}
+if [[ -f $CONFIG ]]; then
+    KEY_ENV=$(setting api_key_env "$CONFIG")
+elif [[ $PROVIDER == openai-compatible ]]; then
+    KEY_ENV=${RAIV_API_KEY_ENV:-OPENCODE_API_KEY}
+elif [[ $PROVIDER == opencode-go ]]; then
+    KEY_ENV=OPENCODE_API_KEY
+else
+    fail 'RAIV_PROVIDER must be opencode-go or openai-compatible.'
+fi
+[[ $KEY_ENV =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || fail 'Credential variable name is invalid.'
 if [[ $MODE == status ]]; then
     [[ -x $HOST && -f $CONFIG ]] || fail 'Session or host missing; use --build for the host. No initialization performed.'
-    unset OPENCODE_API_KEY
+    unset OPENCODE_API_KEY "$KEY_ENV"
     "$HOST" status --config "$CONFIG"
     "$HOST" world-status --config "$CONFIG"
     exit 0
 fi
 if [[ $MODE == run ]]; then
     [[ -t 0 && -t 1 ]] || fail 'Interactive launch requires a terminal (stdin and stdout).'
-    [[ -n ${OPENCODE_API_KEY:-} ]] || fail 'Export OPENCODE_API_KEY first; never put the value in config or arguments.'
+    [[ -n ${!KEY_ENV:-} ]] || fail "Export $KEY_ENV first; never put the value in config or arguments."
 fi
 # Build offline, without exposing the credential to Cargo/build scripts.
 (
-    unset OPENCODE_API_KEY
+    unset OPENCODE_API_KEY "$KEY_ENV"
     export CARGO_TARGET_DIR="$BUILD"
     cargo rustc --offline --locked -p raiv-agent-guest --lib --crate-type cdylib \
         --target wasm32v1-none --release -- -C panic=abort
@@ -72,13 +94,26 @@ if [[ ! -e $SESSION ]]; then
     cp -- "$MODULE" "$SESSION/guest.wasm"
     AGENT=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')
     WORLD=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')
+    if [[ $PROVIDER == openai-compatible ]]; then
+        RAIV_BASE_URL=${RAIV_BASE_URL:-https://opencode.ai/zen/go/v1}
+        RAIV_MODEL=${RAIV_MODEL:-qwen3.8-flash}
+        [[ ${RAIV_BASE_URL:-} =~ ^https://[^[:space:]\"\\?#@]+$ ]] || fail 'RAIV_BASE_URL must be an https:// base URL without credentials, query or fragment.'
+        [[ ${RAIV_MODEL:-} =~ ^[^[:space:][:cntrl:]\"\\]+$ ]] || fail 'RAIV_MODEL must be the exact provider model ID.'
+        INFERENCE="provider = \"openai-compatible\"
+base_url = \"$RAIV_BASE_URL\"
+model = \"$RAIV_MODEL\""
+    else
+        INFERENCE='base_url = "https://opencode.ai/zen/go/v1"
+model = "deepseek-v4.1-flash"
+reasoning_effort = "high"'
+    fi
     cat > "$CONFIG" <<EOF
 schema_version = 1
 state_format = "raiv-state/1"
 [agent]
 profile = "survivor"
 id = "$AGENT"
-mandate = "Assist the local operator. Preserve useful behavioral continuity with patch_memory when needed, then finish with a complete normal response without tool calls. External actions are not approved."
+mandate = "Assist the local operator. Memory is your only continuity across launches: when the operator shares lasting facts, preferences, goals or commitments, save them with patch_memory before answering, and rely on Memory rather than guessing. Then finish with a complete normal response without tool calls. No external actions are available in this session; do not offer them."
 [execution]
 adapter = "local-trusted"
 [runtime]
@@ -86,16 +121,14 @@ guest_module = "guest.wasm"
 module_digest = "$(digest "$SESSION/guest.wasm")"
 [inference]
 protocol = "openai-chat-completions"
-base_url = "https://opencode.ai/zen/go/v1"
-model = "deepseek-v4.1-flash"
-reasoning_effort = "high"
-api_key_env = "OPENCODE_API_KEY"
+$INFERENCE
+api_key_env = "$KEY_ENV"
 stream = true
-max_tokens = 1024
+max_tokens = 4096
 max_request_bytes = 262144
 max_response_bytes = 1048576
 max_header_bytes = 16384
-timeout_ms = 20000
+timeout_ms = 60000
 max_stream_event_bytes = 65536
 max_stream_events = 4096
 [storage]
@@ -119,8 +152,9 @@ else
         -f $SESSION/guest.wasm && -f $SESSION/blocks/raiv-manifest.cbor && \
         -f $SESSION/world/raiv-world.cbor ]] || fail "Incomplete session: $SESSION. Inspect it; no automatic bootstrap/repair."
     [[ $(digest "$CONFIG") == "$(< "$SESSION/config.sha256")" ]] || fail 'Configuration changed; use a separately approved NEW directory, never rebind this session.'
-    cmp -s -- "$MODULE" "$SESSION/guest.wasm" || fail 'Guest changed; keep the old session intact and choose a separately approved NEW directory.'
-    cmp -s -- <(printf '%s\n' "$PLAN") "$SESSION/grants.toml" || fail 'Grant plan changed; launch refused rather than widening limits.'
+    # Sessions keep their own pinned guest and grant plan; a newer build never rebinds them.
+    cmp -s -- "$MODULE" "$SESSION/guest.wasm" || \
+        printf 'Note: this session keeps its own pinned guest; start a new session directory to use the current build.\n'
     STATUS=$("$HOST" status --config "$CONFIG")
 fi
 [[ $(field unresolved "$STATUS") == 0 && $(field phase "$STATUS") == AwaitActor && \
@@ -128,7 +162,11 @@ fi
 MAIN=$(digest "$SESSION/blocks/raiv-manifest.cbor")
 REVISION=$(field revision "$STATUS")
 ROOT_CID=$(field root "$STATUS")
-printf '\nRaiv — Go / deepseek-v4.1-flash / high (LOCAL TEST)\nSession: %s\nConfig SHA-256: %s\nGuest SHA-256: %s\nRoot: %s\nRevision: %s\nMain manifest SHA-256: %s\n' \
+MODEL=$(setting model "$CONFIG")
+EFFORT=$(grep -qE '^reasoning_effort = ' "$CONFIG" && printf ' / %s' "$(setting reasoning_effort "$CONFIG")" || true)
+SOURCE=$(grep -qE '^provider = ' "$CONFIG" && setting provider "$CONFIG" || printf 'opencode-go')
+printf '\nRaiv — %s / %s%s (LOCAL TEST)\nSession: %s\nConfig SHA-256: %s\nGuest SHA-256: %s\nRoot: %s\nRevision: %s\nMain manifest SHA-256: %s\n' \
+    "$SOURCE" "$MODEL" "$EFFORT" \
     "$SESSION" "$(digest "$CONFIG")" "$(digest "$SESSION/guest.wasm")" "$ROOT_CID" "$REVISION" "$MAIN"
 if $FRESH; then
     [[ $REVISION == 0 && $(field admissions "$STATUS") == 0 ]] || fail 'Fresh source is not an empty genesis.'
@@ -138,7 +176,12 @@ else
     WORLD_DIGEST=$(field world_digest "$WORLD_STATUS")
     printf '%s\n' "$WORLD_STATUS"
 fi
-printf 'Plan: 2 prompts, <=3 calls/prompt (<=6 total), 1024 tokens/20s per call, actions=0.\nSynthetic grants: 100 activation/episode units per event; NOT real billing or lifetime funding.\n'
+GRANTS="$SESSION/grants.toml"
+printf 'Plan: %s prompts, <=%s calls/prompt, %s tokens/%ss per call, actions=%s.\nSynthetic grants: %s activation/%s episode units per event; NOT real billing or lifetime funding.\n' \
+    "$(setting max_events "$GRANTS")" "$(setting remaining_model_calls "$GRANTS")" \
+    "$(setting max_tokens "$CONFIG")" "$(( $(setting timeout_ms "$CONFIG") / 1000 ))" \
+    "$(setting remaining_actions "$GRANTS")" "$(setting activation_units "$GRANTS")" \
+    "$(setting remaining_episode_units "$GRANTS")"
 printf 'Approve this exact source/config/plan%s? Type run (anything else stops): ' "$($FRESH && printf ' and its NEW empty world bootstrap' || true)"
 IFS= read -r ANSWER || exit 1
 [[ $ANSWER == run ]] || fail 'Not approved. Session retained; no inference or automatic retry.'

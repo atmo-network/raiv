@@ -11,6 +11,7 @@ fn check_tools(blocks: &Store, root: DaslCid) -> Result<(), GraphError> {
         .unwrap()
         .check_tool_bindings()
 }
+
 fn command_at(blocks: &Store, root: DaslCid) -> (DaslCid, Vec<u8>) {
     let state = AgentState::decode(blocks.get(root).unwrap(), &DecodeLimits::default()).unwrap();
     let cid = state
@@ -24,6 +25,7 @@ fn command_at(blocks: &Store, root: DaslCid) -> (DaslCid, Vec<u8>) {
     };
     (boundary_cid, command.to_vec())
 }
+
 fn definition_change(blocks: &mut Store, root: DaslCid, edit: impl FnOnce(&mut Cbor)) -> DaslCid {
     let state = AgentState::decode(blocks.get(root).unwrap(), &DecodeLimits::default()).unwrap();
     let definition = patch(blocks, state.definition_link(), edit);
@@ -31,6 +33,7 @@ fn definition_change(blocks: &mut Store, root: DaslCid, edit: impl FnOnce(&mut C
         map_mut(r).insert("definition".into(), link(definition));
     })
 }
+
 fn descriptor_change(
     blocks: &mut Store,
     root: DaslCid,
@@ -55,6 +58,7 @@ fn descriptor_change(
         edit(tool);
     })
 }
+
 fn single_pending() -> (Store, DaslCid) {
     let fixture = &identity_graphs()[0];
     let (mut blocks, cid, episode) = episode_for(fixture);

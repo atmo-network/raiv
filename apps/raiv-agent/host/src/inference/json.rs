@@ -1,8 +1,10 @@
 //! Private duplicate/resource preflight before serde_json can own a lossy map.
+
 use super::NormalizeError;
 use raiv::format::DecodeLimits;
 use serde::de::{self, DeserializeSeed, MapAccess, SeqAccess, Visitor};
 use std::{borrow::Cow, fmt};
+
 pub(super) fn parse(
     bytes: &[u8],
     limits: &DecodeLimits,
@@ -23,10 +25,12 @@ pub(super) fn parse(
     // Entire input has passed duplicates, UTF-8, syntax, depth, per-container and aggregate bounds.
     serde_json::from_slice(bytes).map_err(|_| NormalizeError::Json)
 }
+
 struct Budget<'a> {
     limits: &'a DecodeLimits,
     nodes: u64,
 }
+
 impl Budget<'_> {
     fn node<E: de::Error>(&mut self) -> Result<(), E> {
         self.nodes = self
@@ -39,12 +43,15 @@ impl Budget<'_> {
         Ok(())
     }
 }
+
 struct Check<'a, 'b> {
     budget: &'a mut Budget<'b>,
     depth: u64,
 }
+
 impl<'de> DeserializeSeed<'de> for Check<'_, '_> {
     type Value = ();
+
     fn deserialize<D: de::Deserializer<'de>>(self, deserializer: D) -> Result<(), D::Error> {
         if self.depth > self.budget.limits.max_depth {
             return Err(de::Error::custom("depth bound"));
@@ -53,29 +60,38 @@ impl<'de> DeserializeSeed<'de> for Check<'_, '_> {
         deserializer.deserialize_any(self)
     }
 }
+
 impl<'de> Visitor<'de> for Check<'_, '_> {
     type Value = ();
+
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("bounded JSON DATA")
     }
+
     fn visit_unit<E: de::Error>(self) -> Result<(), E> {
         Ok(())
     }
+
     fn visit_bool<E: de::Error>(self, _: bool) -> Result<(), E> {
         Ok(())
     }
+
     fn visit_i64<E: de::Error>(self, _: i64) -> Result<(), E> {
         Ok(())
     }
+
     fn visit_u64<E: de::Error>(self, _: u64) -> Result<(), E> {
         Ok(())
     }
+
     fn visit_f64<E: de::Error>(self, _: f64) -> Result<(), E> {
         Ok(())
     }
+
     fn visit_str<E: de::Error>(self, _: &str) -> Result<(), E> {
         Ok(())
     }
+
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<(), A::Error> {
         while seq
             .next_element_seed(Check {
@@ -86,6 +102,7 @@ impl<'de> Visitor<'de> for Check<'_, '_> {
         {}
         Ok(())
     }
+
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<(), A::Error> {
         let mut keys = Vec::new();
         while let Some(key) = map.next_key_seed(Key)? {
@@ -106,9 +123,12 @@ impl<'de> Visitor<'de> for Check<'_, '_> {
         Ok(())
     }
 }
+
 struct Key;
+
 impl<'de> DeserializeSeed<'de> for Key {
     type Value = Cow<'de, str>;
+
     fn deserialize<D: de::Deserializer<'de>>(
         self,
         deserializer: D,
@@ -116,14 +136,18 @@ impl<'de> DeserializeSeed<'de> for Key {
         deserializer.deserialize_str(self)
     }
 }
+
 impl<'de> Visitor<'de> for Key {
     type Value = Cow<'de, str>;
+
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("JSON key")
     }
+
     fn visit_borrowed_str<E: de::Error>(self, value: &'de str) -> Result<Self::Value, E> {
         Ok(Cow::Borrowed(value))
     }
+
     fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
         let mut text = String::new();
         text.try_reserve_exact(value.len())

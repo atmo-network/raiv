@@ -7,6 +7,7 @@ use crate::{
     definition::ToolControl,
     tools::ToolSet,
 };
+
 fn funded(
     snapshot: &RestoredAgent,
     source: &Cbor,
@@ -24,6 +25,7 @@ fn funded(
         UnitBudget::from_input(&checked),
     )
 }
+
 fn set_units(source: &mut Cbor, activation: u64, episode: u64) {
     let grant = map_mut(source).get_mut("budget_admission").unwrap();
     map_mut(grant).insert("activation_units".into(), Cbor::Integer(activation.into()));
@@ -32,12 +34,14 @@ fn set_units(source: &mut Cbor, activation: u64, episode: u64) {
         Cbor::Integer(episode.into()),
     );
 }
+
 fn number(value: &Cbor) -> u64 {
     let Cbor::Integer(value) = value else {
         panic!("number")
     };
     (*value).try_into().unwrap()
 }
+
 #[test]
 fn checked_packet_grants_carry_full_scope_admission_and_independent_unit_capacities_without_guessing_usage(
 ) {
@@ -62,6 +66,7 @@ fn checked_packet_grants_carry_full_scope_admission_and_independent_unit_capacit
         );
     }
 }
+
 #[test]
 fn model_and_explicit_controls_reserve_counts_and_units_once_before_work_with_no_view_reply_or_terminal_double_debit(
 ) {
@@ -98,6 +103,7 @@ fn model_and_explicit_controls_reserve_counts_and_units_once_before_work_with_no
     );
     assert_eq!(units.reserved_units(), 8);
 }
+
 #[test]
 fn explicit_yield_reserves_units_and_one_action_then_seals_without_claiming_a_constructed_candidate(
 ) {
@@ -116,6 +122,7 @@ fn explicit_yield_reserves_units_and_one_action_then_seals_without_claiming_a_co
     assert_eq!(units.remaining_activation_units(), 4);
     assert_eq!(units.remaining_episode_units(), 7);
 }
+
 #[test]
 fn exhausted_activation_or_episode_and_over_quote_fail_without_a_request_control_or_implicit_no_op()
 {
@@ -149,6 +156,7 @@ fn exhausted_activation_or_episode_and_over_quote_fail_without_a_request_control
     assert_eq!(run.budget().used().actions, 0);
     assert_eq!(units.reserved_units(), 1);
 }
+
 #[test]
 fn wrong_packet_phase_or_count_refusal_preserves_unit_ledger_and_never_changes_another_pending_request(
 ) {
@@ -237,6 +245,7 @@ fn wrong_packet_phase_or_count_refusal_preserves_unit_ledger_and_never_changes_a
     assert_eq!(run.phase(), InferencePhase::ReplyReady);
     assert_eq!(units.reserved_units(), 2);
 }
+
 #[test]
 fn unknown_reported_billing_and_provider_failures_cannot_refund_reservations_or_override_private_counts(
 ) {
@@ -262,6 +271,7 @@ fn unknown_reported_billing_and_provider_failures_cannot_refund_reservations_or_
     assert_eq!(units.remaining_episode_units(), 13);
     assert_eq!(run.budget().used().model_calls, 2);
 }
+
 #[test]
 fn full_u64_exact_reservation_and_free_positive_capacity_are_checked_without_arithmetic_wrap() {
     let fixture = &fixtures()[0];

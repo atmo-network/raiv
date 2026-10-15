@@ -1,5 +1,7 @@
 //! Actual guest yield/error frames; no host decisions or acceptance simulation.
+
 use super::*;
+
 mod acceptance;
 mod action_result;
 pub(crate) mod admission;
@@ -28,6 +30,7 @@ mod simulator;
 mod store;
 #[cfg(target_os = "linux")]
 mod world;
+
 fn set(value: &mut Value, key: &str, replacement: Value) {
     let Value::Map(fields) = value else { panic!() };
     fields
@@ -36,6 +39,7 @@ fn set(value: &mut Value, key: &str, replacement: Value) {
         .unwrap()
         .1 = replacement;
 }
+
 fn fixture(value: &serde_json::Value) -> Value {
     match value {
         serde_json::Value::Null => Value::Null,
@@ -59,6 +63,7 @@ fn fixture(value: &serde_json::Value) -> Value {
         ),
     }
 }
+
 fn packet() -> Value {
     let inputs: serde_json::Value =
         serde_json::from_str(include_str!("../../../../../fixtures/format/input.json")).unwrap();
@@ -67,6 +72,7 @@ fn packet() -> Value {
     input["budget_admission"]["remaining_episode_units"] = 100.into();
     fixture(&input)
 }
+
 fn envelope(kind: &str, payload: Value) -> Vec<u8> {
     encode(&map(vec![
         ("abi_version", Value::Integer(1.into())),
@@ -74,10 +80,12 @@ fn envelope(kind: &str, payload: Value) -> Vec<u8> {
         ("payload", payload),
     ]))
 }
+
 fn genesis(profile: usize) -> Value {
     let mut g = guest::Guest::new();
     decode(&g.step(&frame(profile)).unwrap())
 }
+
 fn activate(data: &Value, input: &Value) -> Vec<u8> {
     let data = field(data, "payload");
     envelope(
@@ -89,6 +97,7 @@ fn activate(data: &Value, input: &Value) -> Vec<u8> {
         ]),
     )
 }
+
 fn error(id: u64) -> Vec<u8> {
     envelope(
         "inference_error",
@@ -98,6 +107,7 @@ fn error(id: u64) -> Vec<u8> {
         ]),
     )
 }
+
 fn code(output: &[u8]) -> String {
     let output = decode(output);
     let Value::Text(code) = field(field(&output, "payload"), "code") else {
@@ -105,6 +115,7 @@ fn code(output: &[u8]) -> String {
     };
     code.clone()
 }
+
 fn verify_infer(output: &[u8], profile: usize) {
     let response = decode(output);
     assert_eq!(field(&response, "type"), &Value::Text("infer".into()));
@@ -147,6 +158,7 @@ fn verify_infer(output: &[u8], profile: usize) {
     // Ciborium independently reconstructs every complete canonical response byte.
     assert_eq!(encode(&response), output);
 }
+
 #[test]
 fn native_activate_yields_exact_enabled_request_then_stale_errors_preserve_pending_and_matching_error_is_terminal(
 ) {
@@ -180,6 +192,7 @@ fn native_activate_yields_exact_enabled_request_then_stale_errors_preserve_pendi
         assert_eq!(code(&guest.step(&input).unwrap()), "guest_instance_busy");
     }
 }
+
 #[test]
 fn malformed_missing_corrupt_duplicate_blocks_and_unfunded_packets_never_spend_first_request_or_fallback_to_genesis(
 ) {
@@ -226,6 +239,7 @@ fn malformed_missing_corrupt_duplicate_blocks_and_unfunded_packets_never_spend_f
         }
     }
 }
+
 #[test]
 fn compiled_registration_and_scripted_model_profile_mismatches_fail_before_inference() {
     for change_model in [true, false] {
@@ -270,6 +284,7 @@ fn compiled_registration_and_scripted_model_profile_mismatches_fail_before_infer
         verify_infer(&guest.step(&activate(&genesis(0), &packet())).unwrap(), 0);
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_wasm_activate_retains_live_request_across_wrong_errors_and_matches_native_until_terminal_failure(

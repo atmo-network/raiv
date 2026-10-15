@@ -7,6 +7,7 @@ fn transitions(blocks: &Store, root: DaslCid) -> Result<(), GraphError> {
         .unwrap()
         .check_transitions()
 }
+
 pub(super) fn input_change(
     fixture: &Value,
     index: usize,
@@ -36,6 +37,7 @@ pub(super) fn input_change(
     });
     (blocks, root, next)
 }
+
 fn pair(fixture: &Value) -> (Vec<u8>, Vec<u8>, crate::format::Id32) {
     let (blocks, _, episode) = episode_for(fixture);
     let boundaries = episode.boundaries().collect::<Vec<_>>();

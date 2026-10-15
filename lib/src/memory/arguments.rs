@@ -11,11 +11,13 @@ use alloc::vec::Vec;
 pub struct SkippedPlane<'a> {
     pub name: &'a str,
 }
+
 impl SkippedPlane<'_> {
     pub fn reason(&self) -> &'static str {
         "unsupported_root"
     }
 }
+
 /// Exact canonical bytes of the object patch, without payload ownership or paths.
 /// Limits are captured; runtime admission and final result/context staging remain
 /// separate. Provider JSON adapters must reject duplicates before CBOR conversion.
@@ -23,6 +25,7 @@ pub struct PatchArguments<'a> {
     bytes: &'a [u8],
     limits: Limits,
 }
+
 impl<'a> PatchArguments<'a> {
     pub fn decode(bytes: &'a [u8], limits: &Limits) -> Result<Self, PatchError> {
         let wire = DecodeLimits {
@@ -81,6 +84,7 @@ impl<'a> PatchArguments<'a> {
             limits: *limits,
         })
     }
+
     /// Canonical input order, exact borrowed names; processed does not imply changed.
     pub fn processed_planes(&self) -> impl Iterator<Item = &'a str> {
         ValueView::preflighted(self.bytes)
@@ -89,6 +93,7 @@ impl<'a> PatchArguments<'a> {
             .map(|e| e.expect("validated field").0)
             .filter(|key| plane(key))
     }
+
     pub fn skipped_planes(&self) -> impl Iterator<Item = SkippedPlane<'a>> {
         ValueView::preflighted(self.bytes)
             .map()
@@ -97,6 +102,7 @@ impl<'a> PatchArguments<'a> {
             .filter(|key| !plane(key))
             .map(|name| SkippedPlane { name })
     }
+
     /// Bounded transient report; not a Memory block, capability or applied-byte rewrite.
     /// Result/context caps bound generated output; model-reply caps bound incoming arguments.
     /// Both states are typed DATA. A runtime must stage this report/context before assignment.
@@ -135,17 +141,21 @@ impl<'a> PatchArguments<'a> {
         }
         Ok(crate::format::ModelValue::from_encoded(e.finish(), &wire)?)
     }
+
     pub fn as_bytes(&self) -> &'a [u8] {
         self.bytes
     }
+
     pub fn limits(&self) -> &Limits {
         &self.limits
     }
+
     /// Build the sole candidate buffer; runtime validates full result/trajectory/context
     /// before RAM assignment. No source copy or mutation occurs during planning.
     pub fn patched(&self, memory: &Memory) -> Result<Memory, PatchError> {
         memory.patched(ValueView::preflighted(self.bytes), &self.limits)
     }
+
     pub fn apply<'memory>(&self, memory: &'memory mut Memory) -> Result<&'memory [u8], PatchError> {
         let candidate = self.patched(memory)?;
         // Preserve even the original buffer on pure no-effect acceptance.

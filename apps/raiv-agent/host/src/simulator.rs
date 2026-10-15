@@ -1,5 +1,6 @@
 //! Volatile local simulator intent/terminal book, NOT a durable/live dispatch permit.
 //! No effects, virtual spending, callbacks, automatic retries, pricing or ledger recovery.
+
 use crate::{
     admission::{AdmissionBook, AdmissionStatus},
     checkpoint::ManifestLimits,
@@ -17,25 +18,30 @@ use raiv::{
     state::Continuation,
 };
 use std::{fmt, sync::atomic::AtomicU64};
+
 static NEXT_BOOK: AtomicU64 = AtomicU64::new(1);
+
 pub mod checkpoint;
 pub mod local;
 pub mod recovery;
 #[cfg(test)]
 mod tests;
 pub mod world;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Status {
     Ready,
     Submitted,
     Terminal,
 }
+
 /// Process-local correlation only; cannot be reconstructed from command/receipt bytes.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ActionTicket {
     origin: u64,
     index: usize,
 }
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ExecutionRecord {
     pub anchor: Anchor,
@@ -44,6 +50,7 @@ pub struct ExecutionRecord {
     pub status: Status,
     pub submission_intents: u64,
 }
+
 struct Entry {
     anchor: Anchor,
     program: ProgramBinding,
@@ -52,6 +59,7 @@ struct Entry {
     intents: u64,
     receipt: Option<Receipt>,
 }
+
 impl Entry {
     fn same_binding(&self, other: &Self) -> bool {
         self.anchor == other.anchor
@@ -59,6 +67,7 @@ impl Entry {
             && self.command.as_bytes() == other.command.as_bytes()
             && self.limits == other.limits
     }
+
     fn record(&self) -> ExecutionRecord {
         ExecutionRecord {
             anchor: self.anchor,
@@ -78,6 +87,7 @@ impl Entry {
         }
     }
 }
+
 #[derive(Debug)]
 pub enum SimulatorError {
     Capacity,
@@ -96,6 +106,7 @@ pub enum SimulatorError {
     Policy(PolicyError),
     Admission(crate::admission::AdmissionError),
 }
+
 impl fmt::Display for SimulatorError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -121,7 +132,9 @@ impl fmt::Display for SimulatorError {
         })
     }
 }
+
 impl std::error::Error for SimulatorError {}
+
 /// Mutable possession is the explicit LOCAL simulator administrative port. Never expose
 /// it to provider/guest payloads. Drop/restart loses this entire volatile book: no live
 /// backend may use it without a durable, world-coupled ledger and recovery protocol.
@@ -130,6 +143,7 @@ pub struct ExecutorBook {
     capacity: usize,
     entries: Vec<Entry>,
 }
+
 impl ExecutorBook {
     pub fn new(capacity: usize) -> Result<Self, SimulatorError> {
         if capacity == 0 {
@@ -143,12 +157,15 @@ impl ExecutorBook {
             entries: Vec::new(),
         })
     }
+
     pub fn len(&self) -> usize {
         self.entries.len()
     }
+
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+
     /// Native current approval + exact file/full closure agreement, not supplied candidate
     /// or a caller-selected Command. An unresolved inference/receipt admission blocks this
     /// gate. Identical pending slots reuse their ticket/status, never reset intent/outcome.
@@ -167,6 +184,7 @@ impl ExecutorBook {
             .map_err(SimulatorError::Policy)?;
         Ok(self.publish(index, entry))
     }
+
     fn pending_entry(
         registered: &RegisteredAgent,
         admissions: &AdmissionBook,
@@ -209,6 +227,7 @@ impl ExecutorBook {
             receipt: None,
         })
     }
+
     fn execution_limits(registered: &RegisteredAgent, caller: &Limits) -> Limits {
         let d = registered.snapshot().definition().limits();
         Limits {
@@ -220,6 +239,7 @@ impl ExecutorBook {
             ..*caller
         }
     }
+
     fn stage(&mut self, entry: &Entry) -> Result<usize, SimulatorError> {
         if let Some(index) = self.entries.iter().position(|e| {
             e.anchor.agent_id == entry.anchor.agent_id
@@ -247,6 +267,7 @@ impl ExecutorBook {
             .map_err(|_| SimulatorError::Allocation)?;
         Ok(self.entries.len())
     }
+
     fn publish(&mut self, index: usize, entry: Entry) -> ActionTicket {
         if index == self.entries.len() {
             self.entries.push(entry);
@@ -256,15 +277,18 @@ impl ExecutorBook {
             index,
         }
     }
+
     fn index(&self, ticket: ActionTicket) -> Result<usize, SimulatorError> {
         if ticket.origin != self.origin || ticket.index >= self.entries.len() {
             return Err(SimulatorError::ForeignTicket);
         }
         Ok(ticket.index)
     }
+
     pub fn record(&self, ticket: ActionTicket) -> Result<ExecutionRecord, SimulatorError> {
         Ok(self.entries[self.index(ticket)?].record())
     }
+
     /// Recheck LOCAL current head/admission/Command/policy and exact disk readiness just
     /// before recording the RAM intent. A captured ticket alone is not current approval.
     /// Still no durable effect ledger, backend call, pricing or live dispatch permit.
@@ -282,6 +306,7 @@ impl ExecutorBook {
             .map_err(SimulatorError::Policy)?;
         Ok(self.mark_submitted(index))
     }
+
     fn ready_current(
         &self,
         ticket: ActionTicket,
@@ -300,11 +325,13 @@ impl ExecutorBook {
         }
         Ok(index)
     }
+
     fn mark_submitted(&mut self, index: usize) -> &Command {
         let entry = &mut self.entries[index];
         entry.intents = 1;
         &entry.command
     }
+
     /// LOW-LEVEL volatile bookkeeping only: no current-head/admission/storage recheck.
     /// One RAM intent, not a backend call or charge. Unknown remains Submitted; there
     /// is no timeout->failure/refund/retry method. Exact accepted Command bytes survive.
@@ -316,6 +343,7 @@ impl ExecutorBook {
         }
         Ok(self.mark_submitted(index))
     }
+
     /// Explicit local terminal DATA approval. Matching proves no external effect/finality.
     /// Bound full receipt validation precedes ownership; duplicate exact outcome is known,
     /// conflicting outcome refuses, and a terminal slot never becomes submitted again.
@@ -330,6 +358,7 @@ impl ExecutorBook {
         }
         Ok(self.entries[index].record())
     }
+
     fn terminal_candidate(
         &self,
         ticket: ActionTicket,
@@ -353,6 +382,7 @@ impl ExecutorBook {
         }
         Ok((index, false))
     }
+
     pub fn receipt(&self, ticket: ActionTicket) -> Result<Option<&Receipt>, SimulatorError> {
         Ok(self.entries[self.index(ticket)?].receipt.as_ref())
     }

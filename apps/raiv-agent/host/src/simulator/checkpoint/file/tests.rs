@@ -6,21 +6,25 @@ use std::{
     fs,
     os::unix::fs::{symlink, MetadataExt},
 };
+
 fn caps() -> ExecutorLimits {
     ExecutorLimits {
         wire: DecodeLimits::default(),
         max_actions: 10,
     }
 }
+
 fn data(intents: u64) -> ExecutorCheckpoint {
     let mut e = entry(1, 1);
     e.intents = intents;
     let frame = super::super::wire::encode(e.anchor.agent_id, e.program, &[&e], &caps()).unwrap();
     ExecutorCheckpoint::decode(&frame, &caps()).unwrap()
 }
+
 fn open(directory: &Directory) -> DiskBlockStore {
     DiskBlockStore::open_existing(&directory.0, DecodeLimits::default()).unwrap()
 }
+
 #[test]
 fn typed_exact_cas_reopen_known_retry_keeps_inode_and_independent_main_file_and_does_not_create_capabilities(
 ) {
@@ -67,6 +71,7 @@ fn typed_exact_cas_reopen_known_retry_keeps_inode_and_independent_main_file_and_
     );
     assert!(ExecutorBook::new(10).unwrap().is_empty());
 }
+
 #[test]
 fn typed_schema_corruption_tight_caps_symlinks_nonregular_refuse_without_repair_or_other_file_changes(
 ) {
@@ -118,6 +123,7 @@ fn typed_schema_corruption_tight_caps_symlinks_nonregular_refuse_without_repair_
     }
     assert!(!directory.0.join("raiv-manifest.cbor").exists());
 }
+
 #[test]
 fn unknown_publication_is_typed_reread_and_identical_acknowledgement_not_a_new_intent_or_world_transaction(
 ) {
@@ -153,6 +159,7 @@ fn unknown_publication_is_typed_reread_and_identical_acknowledgement_not_a_new_i
         1
     );
 }
+
 #[test]
 fn executor_file_keeps_held_fd_confinement_after_directory_path_replacement() {
     let directory = Directory::new();

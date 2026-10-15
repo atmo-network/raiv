@@ -57,6 +57,7 @@ pub struct CommandView<'a> {
     bytes: &'a [u8],
     fields: [ValueView<'a>; 5],
 }
+
 impl<'a> CommandView<'a> {
     /// Validate caller bytes under whole-record/contextual limits, then borrow them.
     /// Preflight may allocate bounded traversal metadata, never another payload set.
@@ -64,15 +65,18 @@ impl<'a> CommandView<'a> {
         Command::validate_encoded(bytes, limits)?;
         Ok(Self::from_validated(bytes))
     }
+
     pub(crate) fn from_validated(bytes: &'a [u8]) -> Self {
         Self {
             bytes,
             fields: validated_fields(bytes),
         }
     }
+
     pub fn as_bytes(self) -> &'a [u8] {
         self.bytes
     }
+
     pub fn action_id(self) -> Id32 {
         self.fields[0]
             .bytes()
@@ -80,12 +84,15 @@ impl<'a> CommandView<'a> {
             .try_into()
             .expect("validated Id32")
     }
+
     pub fn tool_id(self) -> &'a str {
         self.fields[1].text().expect("validated tool ID")
     }
+
     pub fn tool_version(self) -> u64 {
         self.fields[2].unsigned().expect("validated tool version")
     }
+
     pub fn authority_binding(self) -> Id32 {
         self.fields[3]
             .bytes()
@@ -93,6 +100,7 @@ impl<'a> CommandView<'a> {
             .try_into()
             .expect("validated Id32")
     }
+
     pub fn arguments_bytes(self) -> &'a [u8] {
         self.fields[4].encoded()
     }
@@ -289,6 +297,7 @@ mod tests {
     fn record() -> Cbor {
         node(&fixtures()[0]["record"])
     }
+
     fn spec(command: &Command) -> CommandSpec<'_> {
         CommandSpec {
             action_id: command.action_id(),

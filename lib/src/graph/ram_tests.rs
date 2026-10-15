@@ -1,4 +1,5 @@
 extern crate std;
+
 use super::*;
 use crate::{
     activation::{
@@ -9,30 +10,38 @@ use crate::{
 };
 use core::sync::atomic::{AtomicUsize, Ordering};
 use serde_json::json;
+
 static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 static VALIDATE: AtomicUsize = AtomicUsize::new(0);
+
 static PLAN: AtomicUsize = AtomicUsize::new(0);
+
 fn validate(_: &[u8]) -> Result<(), ToolFailure> {
     VALIDATE.fetch_add(1, Ordering::SeqCst);
     Ok(())
 }
+
 fn plan(ctx: PlanningContext<'_>, args: &[u8]) -> Result<crate::format::ModelValue, ToolFailure> {
     PLAN.fetch_add(1, Ordering::SeqCst);
     assert!(ctx.memory.is_some());
     crate::format::ModelValue::decode(args, &ctx.limits.decode_limits())
         .map_err(|_| ToolFailure::PlanningFailed)
 }
+
 fn invalid(_: PlanningContext<'_>, _: &[u8]) -> Result<crate::format::ModelValue, ToolFailure> {
     PLAN.fetch_add(1, Ordering::SeqCst);
     crate::format::ModelValue::decode(&[0xf6], &DecodeLimits::default())
         .map_err(|_| ToolFailure::PlanningFailed)
 }
+
 fn none_plan(ctx: PlanningContext<'_>, _: &[u8]) -> Result<crate::format::ModelValue, ToolFailure> {
     PLAN.fetch_add(1, Ordering::SeqCst);
     assert!(ctx.memory.is_none());
     crate::format::ModelValue::decode(&[0xf6], &DecodeLimits::default())
         .map_err(|_| ToolFailure::PlanningFailed)
 }
+
 fn args_plan(
     _: PlanningContext<'_>,
     args: &[u8],
@@ -41,6 +50,7 @@ fn args_plan(
     crate::format::ModelValue::decode(args, &DecodeLimits::default())
         .map_err(|_| ToolFailure::PlanningFailed)
 }
+
 fn funded(snapshot: &RestoredAgent) -> Cbor {
     let mut input = activation::incoming(snapshot);
     let grant = map_mut(&mut input).get_mut("budget_admission").unwrap();
@@ -53,11 +63,13 @@ fn funded(snapshot: &RestoredAgent) -> Cbor {
     }
     input
 }
+
 fn frame(request: u64, id: &str, tool: &str, args: Cbor) -> Vec<u8> {
     let mut call = reply::call(id, args);
     map_mut(&mut call).insert("tool_id".into(), Cbor::Text(tool.into()));
     encode(&reply::frame(request, vec![call]))
 }
+
 #[test]
 fn registered_patch_continue_updates_bounded_trajectory_then_no_call_finish_preserves_memory_without_journal(
 ) {
@@ -229,6 +241,7 @@ fn registered_patch_continue_updates_bounded_trajectory_then_no_call_finish_pres
     assert_eq!(VALIDATE.load(Ordering::SeqCst), 0);
     assert_eq!(PLAN.load(Ordering::SeqCst), 0);
 }
+
 #[test]
 fn multiple_unknown_and_invalid_arguments_recover_with_all_native_ids_without_any_callback_or_local_debit(
 ) {
@@ -306,6 +319,7 @@ fn multiple_unknown_and_invalid_arguments_recover_with_all_native_ids_without_an
     assert_eq!(PLAN.load(Ordering::SeqCst), 0);
     assert_eq!(run.snapshot().root(), root);
 }
+
 #[test]
 fn pure_continue_and_yield_callbacks_are_admitted_and_pinned_command_identity_ignores_native_ids() {
     let _guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());
@@ -394,6 +408,7 @@ fn pure_continue_and_yield_callbacks_are_admitted_and_pinned_command_identity_ig
     assert_eq!(VALIDATE.load(Ordering::SeqCst), 2);
     assert_eq!(PLAN.load(Ordering::SeqCst), 2);
 }
+
 #[test]
 fn failed_yield_planning_does_not_skip_an_action_slot_and_remains_bounded_with_spent_units() {
     let _guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());
@@ -442,6 +457,7 @@ fn failed_yield_planning_does_not_skip_an_action_slot_and_remains_bounded_with_s
     assert_eq!(PLAN.load(Ordering::SeqCst), 1);
     assert_eq!(run.snapshot().root(), root);
 }
+
 #[test]
 fn small_inbound_patch_can_return_large_memory_but_report_overflow_never_installs_a_draft() {
     let _guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());
@@ -568,7 +584,11 @@ fn small_inbound_patch_can_return_large_memory_but_report_overflow_never_install
             assert_eq!(field(&results[0], "ok"), &Cbor::Bool(false));
             assert_eq!(
                 field(&results[0], "error"),
-                &Cbor::Text("invalid_patch".into())
+                &Cbor::Text(
+                    crate::memory::PatchError::Codec(CodecError::ByteLimit)
+                        .feedback()
+                        .into()
+                )
             );
             assert_eq!(field(&results[0], "result"), &Cbor::Null);
         } else {
@@ -581,6 +601,7 @@ fn small_inbound_patch_can_return_large_memory_but_report_overflow_never_install
         }
     }
 }
+
 #[test]
 fn report_embedding_depth_failure_preserves_live_memory_prefix_and_trajectory_after_charging() {
     let _guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());
@@ -652,6 +673,7 @@ fn report_embedding_depth_failure_preserves_live_memory_prefix_and_trajectory_af
     assert_eq!(run.snapshot().root(), root);
     assert!(run.ram_decision().is_none());
 }
+
 #[test]
 fn context_failure_stages_patch_output_without_mutating_ram_or_root_and_stale_keys_do_not_advance()
 {
@@ -729,6 +751,7 @@ fn context_failure_stages_patch_output_without_mutating_ram_or_root_and_stale_ke
     assert_eq!(run.snapshot().root(), root);
     assert_eq!(run.usage().local_tool_calls, 1);
 }
+
 #[test]
 fn memory_disabled_profile_runs_only_registered_pure_continue_with_no_fictitious_memory_or_patch_capability(
 ) {
@@ -791,6 +814,7 @@ fn memory_disabled_profile_runs_only_registered_pure_continue_with_no_fictitious
         Ok(RamProgress::Sealed)
     );
 }
+
 #[test]
 fn new_actor_episode_yield_keeps_full_width_version_and_independent_cbor_domain_identity_without_memory(
 ) {
@@ -878,6 +902,7 @@ fn new_actor_episode_yield_keeps_full_width_version_and_independent_cbor_domain_
     assert_eq!(command.tool_version(), u64::MAX);
     assert!(run.working_memory().is_none());
 }
+
 #[test]
 fn disabled_callbacks_and_removed_finish_tool_are_rejected_before_intrinsic_completion() {
     let _guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());
@@ -965,6 +990,7 @@ fn disabled_callbacks_and_removed_finish_tool_are_rejected_before_intrinsic_comp
         assert_eq!(run.snapshot().root(), root);
     }
 }
+
 #[test]
 fn malformed_matched_reply_is_fatal_and_known_cost_overflow_never_becomes_no_op_or_an_estimate() {
     let _guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());

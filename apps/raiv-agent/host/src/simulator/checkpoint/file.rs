@@ -1,19 +1,23 @@
 //! Typed executor checkpoint FILE DATA. Byte CAS is not an FSM/world transaction,
 //! authentication, current selection, native capability recreation or dispatch permission.
+
 use super::{wire, ExecutorCheckpoint, ExecutorCheckpointError, ExecutorLimits};
 use crate::disk::{
     manifest::{ManifestError, ManifestFile, Publication},
     DiskBlockStore, DiskError,
 };
 use std::fmt;
+
 #[cfg(test)]
 mod tests;
+
 #[derive(Debug)]
 pub enum ExecutorFileError {
     Checkpoint(ExecutorCheckpointError),
     Disk(DiskError),
     Manifest(ManifestError),
 }
+
 impl fmt::Display for ExecutorFileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -23,7 +27,9 @@ impl fmt::Display for ExecutorFileError {
         }
     }
 }
+
 impl std::error::Error for ExecutorFileError {}
+
 /// Explicit mutable local administrative file port on the held cooperative lock.
 /// It writes only raiv-executor.cbor. No caller-selected path or imported filename exists.
 /// It cannot update the independent main checkpoint file or any RAM executor state.
@@ -31,6 +37,7 @@ pub struct ExecutorCheckpointFile<'a> {
     file: ManifestFile<'a>,
     limits: ExecutorLimits,
 }
+
 impl<'a> ExecutorCheckpointFile<'a> {
     pub fn new(store: &'a mut DiskBlockStore, limits: ExecutorLimits) -> Self {
         Self {
@@ -38,6 +45,7 @@ impl<'a> ExecutorCheckpointFile<'a> {
             limits,
         }
     }
+
     /// Only ENOENT means absence. Existing corrupt, foreign-schema or over-cap data refuses.
     pub fn read(&self) -> Result<Option<ExecutorCheckpoint>, ExecutorFileError> {
         let Some(bytes) = self.file.read().map_err(ExecutorFileError::Disk)? else {
@@ -47,6 +55,7 @@ impl<'a> ExecutorCheckpointFile<'a> {
             .map(Some)
             .map_err(ExecutorFileError::Checkpoint)
     }
+
     /// Preflight caller data and existing typed file before exact-byte file CAS/fsync.
     /// Identical next is acknowledged without replacement, not fresh execution permission.
     /// This port intentionally does NOT enforce FSM transitions or couple world/HEAD changes.

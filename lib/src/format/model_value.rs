@@ -64,6 +64,19 @@ impl ModelValue {
     pub fn into_bytes(self) -> Vec<u8> {
         self.0
     }
+
+    /// Compact JSON presentation, exactly as models see this value.
+    ///
+    /// ```
+    /// use raiv::format::{DecodeLimits, ModelValue, ValueRef};
+    /// let entries = [("b", ValueRef::List(&[ValueRef::Integer(-1)])), ("a", ValueRef::Text("hi"))];
+    /// let value = ModelValue::encode(ValueRef::Map(&entries), &DecodeLimits::default())?;
+    /// assert_eq!(value.json().to_string(), r#"{"a":"hi","b":[-1]}"#);
+    /// # Ok::<(), raiv::format::CodecError>(())
+    /// ```
+    pub fn json(&self) -> super::Json<'_> {
+        super::Json(&self.0)
+    }
 }
 
 enum Frame<'a> {

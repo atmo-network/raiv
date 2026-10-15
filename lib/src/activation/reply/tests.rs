@@ -2,6 +2,7 @@ use super::*;
 use crate::format::oracle::{encode, map_mut};
 use alloc::{vec, vec::Vec};
 use ciborium::value::Value as Cbor;
+
 fn map(entries: Vec<(&str, Cbor)>) -> Cbor {
     Cbor::Map(
         entries
@@ -10,6 +11,7 @@ fn map(entries: Vec<(&str, Cbor)>) -> Cbor {
             .collect(),
     )
 }
+
 fn call(id: &str, arguments: Cbor) -> Cbor {
     map(vec![
         ("call_id", Cbor::Text(id.into())),
@@ -17,6 +19,7 @@ fn call(id: &str, arguments: Cbor) -> Cbor {
         ("arguments", arguments),
     ])
 }
+
 fn frame(request: u64, calls: Vec<Cbor>) -> Cbor {
     map(vec![
         ("request_id", Cbor::Integer(request.into())),
@@ -34,6 +37,7 @@ fn frame(request: u64, calls: Vec<Cbor>) -> Cbor {
         ),
     ])
 }
+
 fn arguments() -> Cbor {
     map(vec![
         ("literal", Cbor::Text("e\u{301}".into())),
@@ -41,6 +45,7 @@ fn arguments() -> Cbor {
         ("min", Cbor::Integer((-9_007_199_254_740_991_i64).into())),
     ])
 }
+
 #[test]
 fn full_width_runtime_metadata_and_borrowed_exact_argument_spans_do_not_become_model_numbers_or_owned_payloads(
 ) {
@@ -89,6 +94,7 @@ fn full_width_runtime_metadata_and_borrowed_exact_argument_spans_do_not_become_m
         bytes[id_offset..].as_ptr()
     );
 }
+
 #[test]
 fn empty_control_is_none_and_multiple_calls_reject_all_before_any_argument_selection() {
     let bytes = encode(&frame(0, vec![]));
@@ -113,6 +119,7 @@ fn empty_control_is_none_and_multiple_calls_reject_all_before_any_argument_selec
         assert_eq!(reply.call_count(), 2);
     }
 }
+
 #[test]
 fn single_arguments_require_a_model_map_without_runtime_values_lossy_integers_or_scalar_coercion() {
     for (arg, error) in [
@@ -134,6 +141,7 @@ fn single_arguments_require_a_model_map_without_runtime_values_lossy_integers_or
         assert_eq!(reply.calls().next().unwrap().call_id, "x");
     }
 }
+
 #[test]
 fn total_reply_bounds_use_reply_not_block_ceiling_and_cover_real_embedding_depth_and_counts() {
     let bytes = encode(&frame(1, vec![call("x", arguments())]));
@@ -205,6 +213,7 @@ fn total_reply_bounds_use_reply_not_block_ceiling_and_cover_real_embedding_depth
     )
     .is_ok());
 }
+
 #[test]
 fn all_truncated_prefixes_trailing_noncanonical_duplicate_and_unknown_fields_reject_as_frames() {
     let source = frame(1, vec![call("x", arguments())]);
@@ -254,6 +263,7 @@ fn all_truncated_prefixes_trailing_noncanonical_duplicate_and_unknown_fields_rej
         Some(ReplyError::Codec(CodecError::NonCanonical))
     );
 }
+
 #[test]
 fn exact_call_and_usage_membership_is_not_a_version_authority_or_cost_default() {
     for member in ["tool_version", "authority_binding", "extra"] {

@@ -8,6 +8,7 @@ fn check_usage(blocks: &Store, root: DaslCid) -> Result<(), GraphError> {
         .unwrap()
         .check_usage_limits()
 }
+
 fn limits_change(blocks: &mut Store, root: DaslCid, values: &[(&str, u64)]) -> DaslCid {
     let state = AgentState::decode(blocks.get(root).unwrap(), &DecodeLimits::default()).unwrap();
     let definition = patch(blocks, state.definition_link(), |r| {
@@ -20,12 +21,14 @@ fn limits_change(blocks: &mut Store, root: DaslCid, values: &[(&str, u64)]) -> D
         map_mut(r).insert("definition".into(), link(definition));
     })
 }
+
 fn selected_episode(blocks: &Store, root: DaslCid) -> DaslCid {
     let state = AgentState::decode(blocks.get(root).unwrap(), &DecodeLimits::default()).unwrap();
     state
         .current_episode_link()
         .unwrap_or_else(|| state.history().last().unwrap())
 }
+
 fn usage_change(
     blocks: &mut Store,
     root: DaslCid,
@@ -65,6 +68,7 @@ fn usage_change(
     });
     (root, boundary)
 }
+
 fn normalized(fixture: &Value, model: u64, local: u64) -> (Store, DaslCid) {
     let mut blocks = store(fixture);
     let mut root = root_of(fixture);

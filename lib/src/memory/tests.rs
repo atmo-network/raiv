@@ -46,6 +46,7 @@ fn independent_golden_bytes_cids_and_sparse_roundtrip() {
         );
     }
 }
+
 #[test]
 fn sparse_encoding_is_order_independent_and_rejects_unnormalized_authored_state() {
     let a = [("aa", ValueRef::Integer(3)), ("b", ValueRef::Integer(2))];
@@ -82,6 +83,7 @@ fn sparse_encoding_is_order_independent_and_rejects_unnormalized_authored_state(
         Err(MemoryError::InvalidSchema)
     );
 }
+
 #[test]
 fn persisted_null_or_empty_object_fields_and_aliases_are_rejected_not_repaired() {
     for value in [
@@ -122,6 +124,7 @@ fn persisted_null_or_empty_object_fields_and_aliases_are_rejected_not_repaired()
         Ok(())
     );
 }
+
 #[test]
 fn structural_headers_keep_runtime_u64_error_precedence_and_closed_membership() {
     for version in [0, 2, u64::MAX] {
@@ -153,6 +156,7 @@ fn structural_headers_keep_runtime_u64_error_precedence_and_closed_membership() 
         );
     }
 }
+
 #[test]
 fn numeric_bytes_links_and_record_resource_bounds_are_not_widened() {
     let bad = json_bytes(

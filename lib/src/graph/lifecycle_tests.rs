@@ -1,4 +1,5 @@
 //! Native scripted checkpoint-DATA recovery. No host acceptance, effects or WASM proof.
+
 use super::*;
 use crate::{
     activation::{
@@ -15,6 +16,7 @@ use serde_json::{json, Value};
 fn witnesses() -> Value {
     serde_json::from_str(include_str!("../../../fixtures/format/lifecycle.json")).unwrap()
 }
+
 fn bytes(value: &Value) -> Vec<u8> {
     let text = value["hex"].as_str().unwrap();
     (0..text.len())
@@ -22,6 +24,7 @@ fn bytes(value: &Value) -> Vec<u8> {
         .map(|index| u8::from_str_radix(&text[index..index + 2], 16).unwrap())
         .collect()
 }
+
 fn check_golden(actual: &[u8], expected: &Value) {
     assert_eq!(actual, bytes(expected));
     assert_eq!(
@@ -30,6 +33,7 @@ fn check_golden(actual: &[u8], expected: &Value) {
     );
     assert_eq!(encode(&cbor(actual)), actual);
 }
+
 fn recovered_fixture(index: usize) -> (Store, DaslCid) {
     let golden = witnesses();
     let mut blocks = store(&fixtures()[1]);
@@ -263,6 +267,7 @@ fn script(window: u64, fixed_golden: bool) {
     assert_eq!(sequence.last_id(), 12);
     assert!(snapshot.current_episode().is_none());
 }
+
 fn golden_input(input: &Cbor, expected: &Value) {
     check_golden(&encode(input), expected);
 }
@@ -271,6 +276,7 @@ fn golden_input(input: &Cbor, expected: &Value) {
 fn scripted_retry_success_reschedule_finish_and_new_wakes_restore_exact_independent_golden_roots() {
     script(2, true);
 }
+
 #[test]
 fn zero_and_minimum_history_keep_last_checkpoint_without_resurrecting_transcript_or_clearing_memory(
 ) {
@@ -278,6 +284,7 @@ fn zero_and_minimum_history_keep_last_checkpoint_without_resurrecting_transcript
         script(window, false);
     }
 }
+
 #[test]
 fn disabled_memory_chain_preserves_episode_counts_without_fabricating_patch_tool_or_planes() {
     let fixture = &fixtures()[0];
@@ -438,6 +445,7 @@ fn restored_pending_input_phase_receipt_and_known_event_replay_fail_before_spend
     );
     assert_eq!(error.sequence.last_id(), 0);
 }
+
 #[test]
 fn fixed_checkpoint_recovery_requires_every_exact_block_and_never_substitutes_genesis() {
     let (blocks, root) = recovered_fixture(3);

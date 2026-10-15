@@ -7,6 +7,7 @@ use crate::{
     launch::{launch_local, record_reserved, LaunchError},
 };
 use raiv::{format::DecodeLimits, limits::Limits};
+
 fn caps() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -14,6 +15,7 @@ fn caps() -> ManifestLimits {
         max_admissions: 10,
     }
 }
+
 fn baseline(
     disk: &mut DiskBlockStore,
     registered: &crate::registry::RegisteredAgent,
@@ -26,6 +28,7 @@ fn baseline(
         .unwrap();
     disk.manifest(caps().wire).replace(None, &bytes).unwrap();
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn durable_reserved_attempted_launched_exposure_and_two_boundary_commits_keep_exact_inputs_and_counts(
@@ -108,6 +111,7 @@ fn durable_reserved_attempted_launched_exposure_and_two_boundary_commits_keep_ex
         raiv::state::Continuation::AwaitAction { .. }
     ));
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn launched_publication_failure_never_exposes_a_run_or_permits_repeat_launch_or_refund() {

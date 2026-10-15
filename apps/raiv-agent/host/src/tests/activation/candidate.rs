@@ -1,4 +1,5 @@
 //! Full closure plus source joins: valid standalone roots do not establish next transitions.
+
 use super::*;
 use crate::{
     candidate::{restore, VerificationError},
@@ -11,12 +12,14 @@ use raiv::{
     limits::Limits,
     preparation::{InputBinding, PreparedInput},
 };
+
 fn hex(s: &str) -> Vec<u8> {
     (0..s.len())
         .step_by(2)
         .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
         .collect()
 }
+
 pub(super) fn source() -> RestoredAgent {
     let bytes = encode(&genesis(1));
     let Output::Initialized { root, blocks } = Output::decode(&bytes, &Limits::default()).unwrap()
@@ -25,6 +28,7 @@ pub(super) fn source() -> RestoredAgent {
     };
     RestoredAgent::restore(root, &blocks, &Limits::default()).unwrap()
 }
+
 pub(super) fn prepared(source: &RestoredAgent, input: &Value) -> PreparedInput {
     let input = ActivationInput::decode(&encode(input), &Limits::default()).unwrap();
     PreparedInput::new(
@@ -40,6 +44,7 @@ pub(super) fn prepared(source: &RestoredAgent, input: &Value) -> PreparedInput {
     )
     .unwrap()
 }
+
 fn activation(source: &RestoredAgent, packet: &PreparedInput) -> Vec<u8> {
     envelope(
         "activate",
@@ -63,6 +68,7 @@ fn activation(source: &RestoredAgent, packet: &PreparedInput) -> Vec<u8> {
         ]),
     )
 }
+
 pub(super) fn boundary(
     source: &RestoredAgent,
     packet: &PreparedInput,
@@ -95,6 +101,7 @@ pub(super) fn boundary(
         ))
         .unwrap()
 }
+
 pub(super) fn check(
     bytes: &[u8],
     source: &RestoredAgent,
@@ -106,6 +113,7 @@ pub(super) fn check(
     };
     restore(candidate, source, packet, caps)
 }
+
 fn change(frame: &[u8], key: &str, value: Value) -> Vec<u8> {
     let mut frame = decode(frame);
     let mut payload = field(&frame, "payload").clone();
@@ -115,6 +123,7 @@ fn change(frame: &[u8], key: &str, value: Value) -> Vec<u8> {
     set(&mut frame, "payload", payload);
     encode(&frame)
 }
+
 fn delta(frame: &[u8]) -> Vec<Value> {
     let frame = decode(frame);
     let Value::Array(blocks) = field(field(field(&frame, "payload"), "candidate"), "new_blocks")
@@ -123,14 +132,17 @@ fn delta(frame: &[u8]) -> Vec<Value> {
     };
     blocks.clone()
 }
+
 fn sorted(mut blocks: Vec<Value>) -> Value {
     blocks.sort_by_key(|b| encode(field(b, "cid")));
     Value::Array(blocks)
 }
+
 struct Overlay<'a> {
     source: &'a RestoredAgent,
     blocks: crate::output::Blocks<'a>,
 }
+
 impl MaterializedBlocks for Overlay<'_> {
     fn get(&self, cid: DaslCid) -> Option<&[u8]> {
         self.blocks.get(cid).or_else(|| {
@@ -141,6 +153,7 @@ impl MaterializedBlocks for Overlay<'_> {
         })
     }
 }
+
 fn standalone(frame: &[u8], source: &RestoredAgent) -> RestoredAgent {
     let Output::Boundary(candidate) = Output::decode(frame, &Limits::default()).unwrap() else {
         panic!()
@@ -155,6 +168,7 @@ fn standalone(frame: &[u8], source: &RestoredAgent) -> RestoredAgent {
     )
     .unwrap()
 }
+
 fn state_change(frame: &[u8], edit: impl FnOnce(&mut Value)) -> Vec<u8> {
     let mut blocks = delta(frame);
     let index = blocks
@@ -180,6 +194,7 @@ fn state_change(frame: &[u8], edit: impl FnOnce(&mut Value)) -> Vec<u8> {
     let frame = change(frame, "new_root", Value::Bytes(cid.as_bytes().to_vec()));
     change(&frame, "new_blocks", sorted(blocks))
 }
+
 #[test]
 fn six_independent_lifecycle_witnesses_restore_and_join_exact_source_episode_history_and_input() {
     let fixture: serde_json::Value = serde_json::from_str(include_str!(
@@ -214,6 +229,7 @@ fn six_independent_lifecycle_witnesses_restore_and_join_exact_source_episode_his
         source = next;
     }
 }
+
 #[test]
 fn binding_disposition_caps_and_every_missing_delta_reject_without_source_mutation() {
     let source = source();
@@ -280,6 +296,7 @@ fn binding_disposition_caps_and_every_missing_delta_reject_without_source_mutati
     );
     check(&frame, &source, &packet, &Limits::default()).unwrap();
 }
+
 #[test]
 fn unrelated_hash_valid_staging_blocks_and_repeated_source_blocks_are_not_candidate_delta() {
     let source = source();
@@ -309,6 +326,7 @@ fn unrelated_hash_valid_staging_blocks_and_repeated_source_blocks_are_not_candid
         VerificationError::Delta
     );
 }
+
 #[test]
 fn hash_valid_alternate_input_cannot_be_relabelled_as_the_admitted_packet() {
     let source = source();
@@ -333,6 +351,7 @@ fn hash_valid_alternate_input_cannot_be_relabelled_as_the_admitted_packet() {
         VerificationError::Transition
     );
 }
+
 #[test]
 fn a_valid_alternate_pending_episode_prefix_cannot_replace_the_source_lineage() {
     let rows: serde_json::Value = serde_json::from_str(include_str!(
@@ -388,6 +407,7 @@ fn a_valid_alternate_pending_episode_prefix_cannot_replace_the_source_lineage() 
         VerificationError::Transition
     );
 }
+
 #[test]
 fn physical_history_zero_one_two_and_disabled_memory_remain_source_joined() {
     for (profile, window) in [(1, 0), (1, 1), (1, 2), (0, 0)] {
@@ -433,6 +453,7 @@ fn physical_history_zero_one_two_and_disabled_memory_remain_source_joined() {
         }
     }
 }
+
 #[test]
 fn standalone_valid_history_rewrite_and_revision_skip_are_not_next_source_transition() {
     let mut source = source();

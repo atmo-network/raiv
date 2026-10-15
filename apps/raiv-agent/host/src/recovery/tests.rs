@@ -5,6 +5,7 @@ use crate::{
     tests::activation::{admission, output},
 };
 use raiv::format::DecodeLimits;
+
 fn caps() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -12,6 +13,7 @@ fn caps() -> ManifestLimits {
         max_admissions: 10,
     }
 }
+
 fn pin(data: &CheckpointManifest, bytes: &[u8]) -> LocalRecoveryPin {
     LocalRecoveryPin {
         manifest_digest: DaslCid::for_block(DaslCodec::Raw, bytes).digest(),
@@ -20,6 +22,7 @@ fn pin(data: &CheckpointManifest, bytes: &[u8]) -> LocalRecoveryPin {
         resources: data.resources(),
     }
 }
+
 #[test]
 fn explicit_pins_missing_bytes_and_late_book_capacity_never_publish_half_recovery() {
     let wasm = output::invalid_output_module();
@@ -149,6 +152,7 @@ fn explicit_pins_missing_bytes_and_late_book_capacity_never_publish_half_recover
     assert!(registry.is_empty());
     assert!(empty_book.is_empty());
 }
+
 #[test]
 fn reserved_metadata_remains_blocked_and_old_tokens_cannot_be_recreated_or_adopted() {
     let wasm = output::invalid_output_module();

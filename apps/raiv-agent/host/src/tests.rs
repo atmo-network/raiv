@@ -1,7 +1,10 @@
 use super::*;
+
 pub(crate) mod activation;
+
 use ciborium::value::{CanonicalValue, Value};
 use std::{collections::BTreeMap, fs};
+
 fn encode(value: &Value) -> Vec<u8> {
     fn canonical(value: &Value) -> Value {
         match value {
@@ -23,9 +26,11 @@ fn encode(value: &Value) -> Vec<u8> {
     ciborium::ser::into_writer(&canonical(value), &mut bytes).unwrap();
     bytes
 }
+
 fn decode(bytes: &[u8]) -> Value {
     ciborium::de::from_reader(bytes).unwrap()
 }
+
 fn map(fields: Vec<(&str, Value)>) -> Value {
     Value::Map(
         fields
@@ -34,6 +39,7 @@ fn map(fields: Vec<(&str, Value)>) -> Value {
             .collect(),
     )
 }
+
 fn field<'a>(value: &'a Value, key: &str) -> &'a Value {
     let Value::Map(fields) = value else {
         panic!("map")
@@ -44,6 +50,7 @@ fn field<'a>(value: &'a Value, key: &str) -> &'a Value {
         .unwrap()
         .1
 }
+
 fn frame(profile: usize) -> Vec<u8> {
     let fixtures: serde_json::Value =
         serde_json::from_str(include_str!("../../../../fixtures/format/genesis.json")).unwrap();
@@ -79,6 +86,7 @@ fn frame(profile: usize) -> Vec<u8> {
         ),
     ]))
 }
+
 fn wasm() -> Vec<u8> {
     fs::read(
         std::env::var("RAIV_GUEST_WASM")
@@ -86,6 +94,7 @@ fn wasm() -> Vec<u8> {
     )
     .unwrap()
 }
+
 #[test]
 fn native_bootstrap_errors_are_atomic_and_initialize_requires_fresh_guest() {
     for profile in [0, 1] {
@@ -107,6 +116,7 @@ fn native_bootstrap_errors_are_atomic_and_initialize_requires_fresh_guest() {
         );
     }
 }
+
 #[test]
 fn native_transport_rejects_versions_duplicates_trailing_unknown_shapes_and_oversized_data() {
     let original = decode(&frame(0));
@@ -161,6 +171,7 @@ fn native_transport_rejects_versions_duplicates_trailing_unknown_shapes_and_over
         &Value::Text("error".into())
     );
 }
+
 #[test]
 fn transport_depth_and_aggregate_entries_are_bounded_before_payload_ownership() {
     let mut deep = vec![0x81; 65];
@@ -201,6 +212,7 @@ fn host_range_checks_refuse_null_overflow_out_of_bounds_and_invalid_limits() {
         Err(BridgeError::InvalidLimits)
     ));
 }
+
 #[test]
 fn vm_refuses_imported_capabilities_without_linking_wasi_or_host_functions() {
     let imported = b"\0asm\x01\0\0\0\x01\x04\x01\x60\0\0\x02\x0a\x01\x04host\x01f\0\0";
@@ -209,6 +221,7 @@ fn vm_refuses_imported_capabilities_without_linking_wasi_or_host_functions() {
         Err(BridgeError::ForbiddenImports)
     ));
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn rust_wasm_bootstrap_equals_native_guest_and_exact_genesis_for_both_memory_profiles() {
@@ -251,6 +264,7 @@ fn rust_wasm_bootstrap_equals_native_guest_and_exact_genesis_for_both_memory_pro
         );
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_guest_ownership_rejects_foreign_and_freed_input_and_preserves_output_across_input_free() {
@@ -281,6 +295,7 @@ fn real_guest_ownership_rejects_foreign_and_freed_input_and_preserves_output_acr
         &Value::Text("initialized".into())
     );
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_wasm_abi_errors_do_not_advance_bootstrap() {
@@ -296,6 +311,7 @@ fn real_wasm_abi_errors_do_not_advance_bootstrap() {
         &Value::Text("initialized".into())
     );
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_vm_fuel_memory_and_allocation_exhaustion_never_produce_success_or_reusable_failed_vm() {

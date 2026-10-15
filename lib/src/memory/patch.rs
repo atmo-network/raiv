@@ -15,11 +15,13 @@ pub enum PatchError {
     PlaneNotMap,
     NullInArray,
 }
+
 impl From<CodecError> for PatchError {
     fn from(error: CodecError) -> Self {
         Self::Codec(error)
     }
 }
+
 impl fmt::Display for PatchError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -31,6 +33,21 @@ impl fmt::Display for PatchError {
         })
     }
 }
+
+impl PatchError {
+    /// Bounded model-facing correction: what to change, never which data to guess.
+    /// Transient trajectory text only; it is not persisted or part of any hash domain.
+    pub fn feedback(&self) -> &'static str {
+        match self {
+            Self::PlaneNotMap => "invalid_patch: each supported plane (intents, strategy, tactics) must be a JSON object of named entries (not a string containing JSON), or null to delete it; e.g. {\"intents\":{\"goal\":\"ship the release\"}}",
+            Self::NullInArray => "invalid_patch: replacement arrays must not contain null at any depth; delete object fields with null instead",
+            Self::InvalidArguments => "invalid_patch: arguments must be the patch object itself, e.g. {\"tactics\":{\"next\":\"check the receipt\"}}",
+            Self::EntryLimit => "invalid_patch: too many entries in one patch; send a smaller patch",
+            Self::Codec(_) => "invalid_patch: patch is malformed or exceeds model-data or Memory bounds; send a smaller well-formed object",
+        }
+    }
+}
+
 impl core::error::Error for PatchError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
@@ -39,6 +56,7 @@ impl core::error::Error for PatchError {
         }
     }
 }
+
 impl Memory {
     /// Apply canonical model-CBOR representing the JSON object patch itself.
     /// Null deletes object fields; arrays replace; empty object fields normalize.
@@ -55,6 +73,7 @@ impl Memory {
     pub fn apply_patch(&mut self, bytes: &[u8], limits: &Limits) -> Result<&[u8], PatchError> {
         PatchArguments::decode(bytes, limits)?.apply(self)
     }
+
     pub(super) fn patched(
         &self,
         patch: ValueView<'_>,

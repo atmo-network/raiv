@@ -23,6 +23,7 @@ pub enum CandidateError {
     State(StateError),
     Graph(GraphError),
 }
+
 impl fmt::Display for CandidateError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -36,6 +37,7 @@ impl fmt::Display for CandidateError {
         }
     }
 }
+
 impl core::error::Error for CandidateError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
@@ -48,6 +50,7 @@ impl core::error::Error for CandidateError {
         }
     }
 }
+
 impl From<CodecError> for CandidateError {
     fn from(error: CodecError) -> Self {
         Self::Codec(error)
@@ -189,11 +192,13 @@ impl Activation<'_> {
             .map_err(CandidateError::Codec)
     }
 }
+
 struct Overlay<'a> {
     source: &'a RestoredAgent,
     additions: &'a [(DaslCid, &'a [u8])],
     memory: Option<(DaslCid, &'a [u8])>,
 }
+
 impl MaterializedBlocks for Overlay<'_> {
     fn get(&self, cid: DaslCid) -> Option<&[u8]> {
         self.additions

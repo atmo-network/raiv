@@ -1,4 +1,5 @@
 //! Volatile exact placement/readback only, never acceptance or a storage lease.
+
 use super::*;
 use crate::{
     output::Output,
@@ -9,6 +10,7 @@ use raiv::{
     graph::{MaterializedBlocks, RestoredAgent},
     limits::Limits,
 };
+
 fn capacity(source: &RestoredAgent) -> StoreLimits {
     StoreLimits {
         max_blocks: source.block_count(),
@@ -16,6 +18,7 @@ fn capacity(source: &RestoredAgent) -> StoreLimits {
         wire: DecodeLimits::default(),
     }
 }
+
 #[test]
 fn exact_closure_placement_is_idempotent_and_late_capacity_failure_preserves_all_owned_buffers() {
     let source = routing::source();
@@ -54,6 +57,7 @@ fn exact_closure_placement_is_idempotent_and_late_capacity_failure_preserves_all
         assert_eq!(partial.get(cid).unwrap().as_ptr(), pointer);
     }
 }
+
 #[test]
 fn wrong_hash_codec_noncanonical_and_narrow_wire_limits_never_become_stored_data() {
     let mut store = MemoryBlockStore::new(StoreLimits {
@@ -84,6 +88,7 @@ fn wrong_hash_codec_noncanonical_and_narrow_wire_limits_never_become_stored_data
     assert!(matches!(tiny.place(&source), Err(StoreError::Codec(_))));
     assert_eq!(tiny.block_count(), 0);
 }
+
 #[test]
 fn readback_requires_every_dependency_and_stricter_caller_capacity_without_genesis_fallback() {
     let source = routing::source();
@@ -115,6 +120,7 @@ fn readback_requires_every_dependency_and_stricter_caller_capacity_without_genes
     assert_eq!(store.block_count(), source.block_count());
     store.readback(&source, &Limits::default()).unwrap();
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_sealed_candidate_places_exact_new_and_retained_bytes_without_updating_registered_anchor() {

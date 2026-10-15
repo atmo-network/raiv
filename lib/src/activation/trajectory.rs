@@ -1,4 +1,5 @@
 //! Owns transient turn/result trajectory assembly, not checkpoints or provider JSON.
+
 use super::{ActivationError, ModelReply};
 use crate::{
     format::{validate_model_value, DecodeLimits, ModelValue, RecordEncoder, ValueView},

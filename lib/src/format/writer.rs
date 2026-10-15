@@ -25,6 +25,7 @@ impl BoundedWriter {
 
 impl Write for BoundedWriter {
     type Error = CodecError;
+
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), Self::Error> {
         self.check_additional(bytes.len())?;
         self.bytes

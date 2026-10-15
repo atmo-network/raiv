@@ -25,6 +25,7 @@ fn borrowed_object_arguments_capture_limits_and_return_complete_memory() {
     );
     assert_eq!(patch.apply(&mut working).unwrap(), draft.value_bytes());
 }
+
 #[test]
 fn duplicate_canonical_keys_are_not_sequential_writes_and_old_envelopes_are_unknown_planes() {
     // {tactics:{x:1,x:2}} keeps duplicate evidence in raw wire, never a lossy Map.
@@ -44,6 +45,7 @@ fn duplicate_canonical_keys_are_not_sequential_writes_and_old_envelopes_are_unkn
         assert!(PatchArguments::decode(&bytes, &Limits::default()).is_err());
     }
 }
+
 #[test]
 fn replacement_array_null_is_rejected_before_cleanup_could_hide_it() {
     for value in [
@@ -64,6 +66,7 @@ fn replacement_array_null_is_rejected_before_cleanup_could_hide_it() {
     )
     .is_ok());
 }
+
 #[test]
 fn full_input_count_depth_and_byte_bounds_apply_before_small_output() {
     let patch = json_bytes(&json!({"tactics":{"x":{"y":null}}}));
@@ -140,6 +143,7 @@ fn full_input_count_depth_and_byte_bounds_apply_before_small_output() {
     )
     .is_ok());
 }
+
 #[test]
 fn model_numeric_and_runtime_value_restrictions_apply_even_to_replacement_arrays() {
     for value in [
@@ -159,6 +163,7 @@ fn model_numeric_and_runtime_value_restrictions_apply_even_to_replacement_arrays
         Err(PatchError::Codec(CodecError::UnsupportedValue))
     ));
 }
+
 #[test]
 fn deep_array_merge_and_destruction_are_iterative_and_output_depth_is_checked_atomically() {
     let mut bytes: Vec<u8> = b"\xa1\x67tactics\xa1\x61x".to_vec();
@@ -239,6 +244,7 @@ fn root_selection_never_remaps_synonyms_and_reports_complete_canonical_data() {
         ciborium::value::Value::Bool(false)
     )));
 }
+
 #[test]
 fn all_skipped_reuses_memory_but_ignored_payloads_cannot_escape_any_input_bound() {
     let bytes =
@@ -282,6 +288,7 @@ fn all_skipped_reuses_memory_but_ignored_payloads_cannot_escape_any_input_bound(
         assert_eq!(live.as_bytes().as_ptr(), ptr);
     }
 }
+
 #[test]
 fn report_output_failure_is_bounded_staging_not_a_memory_assignment() {
     let bytes = json_bytes(&json!({"intents":{"x":2}}));

@@ -37,13 +37,9 @@ jobs:
           cargo +"$RUST_TOOLCHAIN" fmt --all --check
           cargo +"$RUST_TOOLCHAIN" check --locked -p raiv --lib --target wasm32-unknown-unknown
           cargo +"$RUST_TOOLCHAIN" check --locked -p raiv --lib --target thumbv7em-none-eabi
-      - name: Exact lifecycle fixture regeneration
-        run: |
-          mkdir -p target
-          python3 fixtures/generate_profiles.py --check
-          python3 fixtures/generate_demo_scenario.py --check
-          python3 fixtures/generate_lifecycle.py > target/ci-lifecycle.json
-          cmp fixtures/format/lifecycle.json target/ci-lifecycle.json
+          RUSTDOCFLAGS="-D warnings" cargo +"$RUST_TOOLCHAIN" doc --locked -p raiv --no-deps
+      - name: Documentation links and anchors
+        run: bash .github/scripts/check-links.sh
       - name: Feature and complete dependency graph evidence
         run: |
           cargo +"$RUST_TOOLCHAIN" tree --locked -p raiv --target wasm32-unknown-unknown -e features --edges normal,build
@@ -97,3 +93,7 @@ jobs:
           TMPDIR="$PWD/target/raiv-ci-tmp" \
             RAIV_GUEST_WASM="$PWD/target/wasm32v1-none/release/raiv_agent.wasm" \
             sh apps/raiv-agent/test-host.sh "$HOST_TOOLCHAIN"
+      - name: Bash launcher regressions and actual-Wasmi startup (no network or credential)
+        run: |
+          cargo +"$HOST_TOOLCHAIN" build --locked -p raiv-agent-host --bin raiv-agent
+          bash apps/raiv-agent/test-run.sh --native

@@ -1,6 +1,8 @@
 //! Scripted receipt provenance/late storage refusal must preserve every observable book.
+
 use super::*;
 use crate::admission::AdmissionError;
+
 fn request(receipt: &raiv::receipt::Receipt, event: u8, grant: u8) -> LedgerActionResult {
     let input = action_result::input(receipt, event, grant);
     let approved_grant = input.budget_admission();
@@ -9,6 +11,7 @@ fn request(receipt: &raiv::receipt::Receipt, event: u8, grant: u8) -> LedgerActi
         approved_grant,
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn ledger_admission_refuses_uninstalled_forged_foreign_replay_caps_and_late_storage_failures_atomically(

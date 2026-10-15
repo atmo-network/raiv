@@ -11,6 +11,7 @@ fn number(value: &Cbor) -> u64 {
     };
     (*value).try_into().unwrap()
 }
+
 fn accepted(snapshot: &RestoredAgent) -> EpisodeCounts {
     let mut result = EpisodeCounts {
         model_calls: 0,
@@ -27,6 +28,7 @@ fn accepted(snapshot: &RestoredAgent) -> EpisodeCounts {
     }
     result
 }
+
 fn grant(source: &mut Cbor, models: u64, actions: u64) {
     let admission = map_mut(source).get_mut("budget_admission").unwrap();
     map_mut(admission).insert("remaining_model_calls".into(), Cbor::Integer(models.into()));

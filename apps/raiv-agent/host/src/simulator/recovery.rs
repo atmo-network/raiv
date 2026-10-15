@@ -1,5 +1,6 @@
 //! Explicit paired-pin recovery of LOCAL executor bookkeeping, not world/effect recovery,
 //! global currentness, principal authentication or replay of a lost submission.
+
 use super::{
     checkpoint::{
         file::{ExecutorCheckpointFile, ExecutorFileError},
@@ -10,8 +11,10 @@ use super::{
 };
 use crate::{policy::current_pin as source_pin, recovery::LocalRecoveryPin};
 use raiv::format::{DaslCid, DaslCodec};
+
 #[cfg(test)]
 mod tests;
+
 /// Independently selected native administrative metadata. Import/provider/guest data
 /// cannot select this pin. Hash equality itself is not external approval/currentness.
 #[derive(Clone, Copy, Debug)]
@@ -19,6 +22,7 @@ pub struct ExecutorRecoveryPin {
     pub source: LocalRecoveryPin,
     pub checkpoint_digest: Id32,
 }
+
 #[derive(Debug)]
 pub enum ExecutorRecoveryError {
     NotEmpty,
@@ -29,6 +33,7 @@ pub enum ExecutorRecoveryError {
     File(ExecutorFileError),
     Policy(PolicyError),
 }
+
 impl fmt::Display for ExecutorRecoveryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -44,7 +49,9 @@ impl fmt::Display for ExecutorRecoveryError {
         })
     }
 }
+
 impl std::error::Error for ExecutorRecoveryError {}
+
 fn file(
     disk: &mut DiskBlockStore,
     limits: &LocalExecutorLimits,
@@ -54,9 +61,11 @@ fn file(
         .map_err(ExecutorRecoveryError::File)?
         .ok_or(ExecutorRecoveryError::MissingCheckpoint)
 }
+
 fn digest(data: &ExecutorCheckpoint) -> Id32 {
     DaslCid::for_block(DaslCodec::Raw, data.as_bytes()).digest()
 }
+
 fn restore_error(error: ExecutorCheckpointError) -> ExecutorRecoveryError {
     match error {
         e @ ExecutorCheckpointError::Simulator(SimulatorError::Admission(_)) => {
@@ -66,6 +75,7 @@ fn restore_error(error: ExecutorCheckpointError) -> ExecutorRecoveryError {
         e => ExecutorRecoveryError::Checkpoint(e),
     }
 }
+
 fn preflight(
     data: &ExecutorCheckpoint,
     registered: &RegisteredAgent,
@@ -81,6 +91,7 @@ fn preflight(
     )
     .map_err(restore_error)
 }
+
 /// Approved RAM book + exact typed file/current source agreement, not imported selection.
 /// Both files/required closure are re-acknowledged on the held lock; they are NOT one
 /// world transaction. Export neither approves the pin nor proves pending-input retention.
@@ -114,6 +125,7 @@ pub fn current_pin(
         checkpoint_digest: digest(&stored),
     })
 }
+
 /// Adopt metadata into an EMPTY independently created native book. Retain its NEW origin;
 /// issue no ActionTicket and call no backend. Later authorize_pending explicitly obtains
 /// new process-local correlation; Ready remains zero, Submitted/Terminal never reset.

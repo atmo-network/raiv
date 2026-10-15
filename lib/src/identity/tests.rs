@@ -17,9 +17,11 @@ fn hex(text: &str) -> Vec<u8> {
 fn id(value: &Value) -> Id32 {
     hex(value.as_str().unwrap()).try_into().unwrap()
 }
+
 fn fixtures() -> Value {
     serde_json::from_str(include_str!("../../../fixtures/format/identity.json")).unwrap()
 }
+
 fn command_fixture(index: usize) -> Command {
     let fixtures: Value =
         serde_json::from_str(include_str!("../../../fixtures/format/command.json")).unwrap();

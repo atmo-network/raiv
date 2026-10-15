@@ -1,9 +1,10 @@
 //! Native terminal operator admission. Not external Actor authentication or an effect executor.
+
 use super::{
     advance::{self, Accepted, NativeRequest},
     bounds,
     config::{decimal, id, Config},
-    fail, read_bounded,
+    fail, memory_view, read_bounded,
     world::selected_pin,
     Result,
 };
@@ -30,6 +31,7 @@ use raiv_agent_host::{
     terminal::{Role, Signal, TerminalSession, TerminalUi, UiLimits},
 };
 use std::{path::Path, str::FromStr, time::Duration};
+
 pub(super) struct GrantPlan {
     pub activation_units: u64,
     pub episode_units: u64,
@@ -37,12 +39,14 @@ pub(super) struct GrantPlan {
     pub actions: u64,
     pub max_events: usize,
 }
+
 impl GrantPlan {
     fn load(path: &Path) -> Result<Self> {
         let raw = read_bounded(path, 4096)?;
         let text = std::str::from_utf8(&raw).map_err(|_| fail("grant plan UTF-8"))?;
         Self::parse(text)
     }
+
     fn parse(text: &str) -> Result<Self> {
         let table = toml::Table::from_str(text).map_err(|_| fail("invalid grant plan TOML"))?;
         if table.len() != 5
@@ -83,6 +87,7 @@ impl GrantPlan {
         }
         Ok(plan)
     }
+
     pub(super) fn input(
         &self,
         text: &str,
@@ -127,6 +132,7 @@ impl GrantPlan {
         Ok((input, grant))
     }
 }
+
 pub(super) fn random_ids() -> Result<[[u8; 32]; 2]> {
     let mut bytes = [0u8; 64];
     let mut at = 0;
@@ -150,12 +156,14 @@ pub(super) fn random_ids() -> Result<[[u8; 32]; 2]> {
     ids[1].copy_from_slice(&bytes[32..]);
     Ok(ids)
 }
+
+/// Returns the approved source's accepted Memory as compact JSON, for presentation only.
 pub(super) fn verify_initial(
     config: &Config,
     definition: &Definition,
     module: &[u8],
     pin: WorldRecoveryPin,
-) -> Result<()> {
+) -> Result<Option<String>> {
     if config.live.is_none() {
         return Err(fail("interactive command requires live configuration"));
     }
@@ -224,8 +232,28 @@ pub(super) fn verify_initial(
             "interactive world differs from approved configuration",
         ));
     }
-    Ok(())
+    Ok(reg
+        .snapshot()
+        .memory()
+        .map(|memory| memory.json().to_string()))
 }
+
+/// Abbreviated CID for presentation; full roots stay in status/manifests.
+fn short(cid: &str) -> String {
+    match (
+        cid.get(..4),
+        cid.len().checked_sub(6).and_then(|at| cid.get(at..)),
+    ) {
+        (Some(head), Some(tail)) if cid.len() > 12 => format!("{head}…{tail}"),
+        _ => cid.to_owned(),
+    }
+}
+
+fn plural(n: impl Into<u64>, one: &str, many: &str) -> String {
+    let n = n.into();
+    format!("{n} {}", if n == 1 { one } else { many })
+}
+
 fn refusal_message(error: &(dyn std::error::Error + 'static)) -> String {
     // Only our closed native diagnostic type may be formatted, never an arbitrary error chain.
     match error.downcast_ref::<advance::NativeFailure>() {
@@ -233,11 +261,13 @@ fn refusal_message(error: &(dyn std::error::Error + 'static)) -> String {
         None => "Native advancement refused or outcome unresolved. Details withheld; inspect independently selected checkpoints. Never auto-refund/relaunch/replay.".into(),
     }
 }
+
 pub(super) struct Controller {
     pub paired: WorldRecoveryPin,
     pub remaining: usize,
     pub blocked: bool,
 }
+
 impl Controller {
     /// Only called for a locked native terminal Submit. Caller driver still validates full authority.
     pub(super) fn submit(
@@ -268,24 +298,46 @@ impl Controller {
         match result {
             Ok(accepted) => {
                 ui.complete_input(true);
-                if let Some(text) = accepted.model_text {
-                    let _ = ui.push_history(Role::Model, &text);
+                if let Some(text) = &accepted.model_text {
+                    let _ = ui.push_history(Role::Model, text);
                 } else {
                     let _ = ui.push_history(
                         Role::Status,
-                        "No assistant text was supplied. Acceptance is not a textual answer.",
+                        "The agent finished without reply text; the boundary is still accepted.",
                     );
                 }
-                let _ = ui.push_history(Role::Status, &accepted.display);
+                if let Some((before, after)) = &accepted.memory_change {
+                    let changes = memory_view::changes(before, after);
+                    if !changes.is_empty() {
+                        let _ = ui.push_history(Role::Memory, &changes);
+                    }
+                }
+                let receipt = format!(
+                    "Checkpoint r{} accepted · {} · {}",
+                    accepted.revision,
+                    short(&accepted.root),
+                    plural(accepted.model_calls as u64, "model call", "model calls"),
+                );
                 match accepted.next {
                     Some(pin) if accepted.await_actor && self.remaining > 0 => {
                         self.paired = pin;
-                        let _=ui.push_history(Role::Status,"Boundary ACCEPTED · AwaitActor. Enter can approve a fresh event on the exported known RAM pin.");
+                        let left = plural(self.remaining as u64, "prompt", "prompts");
+                        let _ = ui.push_history(
+                            Role::Status,
+                            &format!("{receipt} · {left} left in this launch"),
+                        );
+                    }
+                    Some(_) if accepted.await_actor => {
+                        self.blocked = true;
+                        ui.set_enabled(false);
+                        let _ = ui.push_history(Role::Status, &receipt);
+                        let _ = ui.push_history(Role::Status, "This launch's prompts are used up. Memory is saved: Esc, then ./run.sh again to continue.");
                     }
                     _ => {
                         self.blocked = true;
                         ui.set_enabled(false);
-                        let _=ui.push_history(Role::Status,"Boundary accepted. Prompt blocked: next approved pin unavailable, pending action, or finite grant plan exhausted. No replay; use independent inspection/execute-pending/resume.");
+                        let _ = ui.push_history(Role::Status, &receipt);
+                        let _ = ui.push_history(Role::Status, "Prompt closed: the agent awaits an action result or the next checkpoint pin is unavailable. Inspect with ./run.sh --status; nothing is replayed.");
                     }
                 }
             }
@@ -299,6 +351,7 @@ impl Controller {
         Ok(())
     }
 }
+
 // Input arriving during synchronous inference must not silently become a next approved event.
 fn discard_queued(
     mut read: impl FnMut() -> std::io::Result<Option<crossterm::event::Event>>,
@@ -322,6 +375,7 @@ fn discard_queued(
     }
     Ok((exit, true))
 }
+
 pub fn run(
     config: &Config,
     definition: &Definition,
@@ -340,6 +394,7 @@ pub fn run(
         |request| advance::execute_native(config, definition, module, request),
     )
 }
+
 pub(super) fn run_with(
     config: &Config,
     definition: &Definition,
@@ -354,14 +409,35 @@ pub(super) fn run_with(
         source: selected_pin(pin_file, config, definition)?,
         world_digest: id(world_digest)?,
     };
-    verify_initial(config, definition, module, paired)?;
+    let memory = verify_initial(config, definition, module, paired)?;
     let caller = Limits::default();
     let mut ui = TerminalUi::new(UiLimits {
         prompt_bytes: usize::try_from(caller.max_observation_bytes.saturating_sub(16))?,
         history_bytes: usize::try_from(caller.max_context_bytes)?,
-        history_entries: plan.max_events * 3 + 4,
+        history_entries: plan.max_events * 5 + 6,
     })?;
-    ui.push_history(Role::Status,"No transcript restored. Enter: finite native ActorWake/pin approval. LOCAL TEST; no real effects. Esc after bounded inference; queued typing discarded.")?;
+    let anchor = paired.source.anchor;
+    let root = short(&anchor.root.to_string());
+    ui.push_history(
+        Role::Status,
+        &if anchor.revision == 0 {
+            format!("New agent · genesis checkpoint r0 · {root}")
+        } else {
+            format!("Checkpoint r{} restored · {root} · earlier conversation is not restored; the agent continues from its Memory.", anchor.revision)
+        },
+    )?;
+    match memory.as_deref() {
+        Some("{}") => ui.push_history(Role::Status, "Memory is empty so far.")?,
+        Some(memory) => ui.push_history(Role::Memory, &memory_view::summary(memory))?,
+        None => ui.push_history(Role::Status, "This profile has no Memory.")?,
+    }
+    ui.push_history(
+        Role::Status,
+        &format!(
+            "Local test, no real effects · {} this launch · typing during a reply is discarded.",
+            plural(plan.max_events as u64, "prompt", "prompts"),
+        ),
+    )?;
     let mut controller = Controller {
         paired,
         remaining: plan.max_events,
@@ -417,11 +493,13 @@ pub(super) fn run_with(
         }
     }
     drop(terminal);
-    Ok("interactive=closed; native outcomes require independently selected checkpoint inspection\n".into())
+    Ok("interactive=closed; accepted checkpoints and Memory stay in this session. Reopen it to continue; use status to inspect.\n".into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn queued_input_during_inference_never_becomes_approval_and_exit_is_deferred_not_lost() {
         use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
@@ -444,6 +522,7 @@ mod tests {
         );
         assert_eq!(events.len(), 1);
     }
+
     #[test]
     fn refusal_presentation_formats_only_closed_native_diagnostics_not_raw_errors() {
         use raiv_agent_host::inference::http::ClientError;
@@ -467,6 +546,7 @@ mod tests {
         assert!(!refusal_message(raw.as_ref()).contains("SECRET_SENTINEL"));
         assert!(refusal_message(raw.as_ref()).contains("Details withheld"));
     }
+
     #[test]
     fn finite_plan_is_closed_exact_text_and_actor_input_contains_only_current_prompt() {
         let source="activation_units=\"100\"\nremaining_episode_units=\"100\"\nremaining_model_calls=\"16\"\nremaining_actions=\"4\"\nmax_events=\"2\"\n";

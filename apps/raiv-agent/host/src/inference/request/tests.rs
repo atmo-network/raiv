@@ -16,6 +16,7 @@ use raiv::{
     memory::Memory,
     position::Position,
 };
+
 pub(super) fn config() -> ProviderConfig {
     ProviderConfig {
         protocol: "openai-chat-completions".into(),
@@ -35,6 +36,7 @@ pub(super) fn config() -> ProviderConfig {
         },
     }
 }
+
 pub(super) fn encoded(
     kind: &str,
     payload: impl FnOnce(&mut minicbor::Encoder<minicbor::encode::write::Cursor<[u8; 32768]>>),
@@ -52,6 +54,7 @@ pub(super) fn encoded(
     e.str("abi_version").unwrap().u64(1).unwrap();
     e.writer().get_ref()[..e.writer().position()].to_vec()
 }
+
 pub(super) fn bootstrap(def: &Definition) -> Vec<u8> {
     let memory = if def.memory_profile() == MemoryProfile::IntentsStrategyTactics {
         Some(Memory::encode(&[], &Limits::default().decode_limits()).unwrap())
@@ -75,6 +78,7 @@ pub(super) fn bootstrap(def: &Definition) -> Vec<u8> {
             .unwrap();
     })
 }
+
 pub(super) fn activation(initial: &[u8], actions: u64) -> Vec<u8> {
     let Output::Initialized { root, blocks } = Output::decode(initial, &Limits::default()).unwrap()
     else {
@@ -136,6 +140,7 @@ pub(super) fn activation(initial: &[u8], actions: u64) -> Vec<u8> {
         }
     })
 }
+
 fn infer(output: &[u8]) -> (u64, Request<'_>) {
     let Output::Infer {
         request_id,
@@ -146,6 +151,7 @@ fn infer(output: &[u8]) -> (u64, Request<'_>) {
     };
     (request_id, request)
 }
+
 fn profile(memory: MemoryProfile) -> Definition {
     guest::opencode_definition(
         memory,
@@ -155,6 +161,7 @@ fn profile(memory: MemoryProfile) -> Definition {
     )
     .unwrap()
 }
+
 fn exercise(mut step: impl FnMut(&[u8]) -> Vec<u8>) {
     let def = profile(MemoryProfile::IntentsStrategyTactics);
     let initial = step(&bootstrap(&def));
@@ -283,11 +290,13 @@ fn exercise(mut step: impl FnMut(&[u8]) -> Vec<u8>) {
     )
     .is_ok_and(|memory| memory.value_bytes() == expected.as_bytes())));
 }
+
 #[test]
 fn native_opencode_profile_maps_exact_context_and_enabled_tools_across_retained_patch_finish() {
     let mut guest = guest::Guest::new();
     exercise(|frame| guest.step(frame).unwrap());
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_opencode_profile_mapping_mock_json_sse_equals_native_without_transcript_or_network() {
@@ -301,6 +310,7 @@ fn real_opencode_profile_mapping_mock_json_sse_equals_native_without_transcript_
         actual
     });
 }
+
 #[test]
 fn profile_and_mapping_refuse_model_endpoint_parameters_policy_rebind_and_output_overflow() {
     let def = profile(MemoryProfile::None);
@@ -314,7 +324,7 @@ fn profile_and_mapping_refuse_model_endpoint_parameters_policy_rebind_and_output
         match mutation {
             0 => cfg.model = "other".into(),
             1 => cfg.base_url = "https://other/v1".into(),
-            2 => cfg.protocol = "anthropic-messages".into(),
+            2 => cfg.protocol = "messages-v1".into(),
             _ => cfg.max_request_bytes = 16,
         };
         assert!(encode_chat_request(&def, request, &cfg, &Limits::default()).is_err());
@@ -336,6 +346,7 @@ fn profile_and_mapping_refuse_model_endpoint_parameters_policy_rebind_and_output
         Some(RequestError::Binding)
     );
 }
+
 #[test]
 fn native_provider_tools_preserve_only_guest_budget_enabled_subset() {
     for memory in [MemoryProfile::None, MemoryProfile::IntentsStrategyTactics] {
@@ -368,6 +379,7 @@ fn native_provider_tools_preserve_only_guest_budget_enabled_subset() {
         );
     }
 }
+
 #[test]
 #[ignore = "build fresh tool-free completion wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_tool_free_veto_final_reply_maps_without_api_tool_fields_and_equals_native() {
@@ -400,6 +412,7 @@ fn real_tool_free_veto_final_reply_maps_without_api_tool_fields_and_equals_nativ
         Output::Boundary(_)
     ));
 }
+
 #[test]
 fn reference_profiles_bind_same_tools_without_noop_or_registered_finish() {
     for memory in [MemoryProfile::None, MemoryProfile::IntentsStrategyTactics] {
@@ -418,6 +431,7 @@ fn reference_profiles_bind_same_tools_without_noop_or_registered_finish() {
         );
     }
 }
+
 #[test]
 fn tool_removal_preserves_disabled_inference_metadata_not_old_definition_identity() {
     for memory in [MemoryProfile::None, MemoryProfile::IntentsStrategyTactics] {
@@ -436,6 +450,7 @@ fn tool_removal_preserves_disabled_inference_metadata_not_old_definition_identit
         assert_eq!(def.inference_profile_bytes(), expected.as_bytes());
     }
 }
+
 #[test]
 fn closed_profile_byte_schema_rejects_extensions_duplicates_thinking_and_credential_endpoints() {
     let def = profile(MemoryProfile::None);
@@ -457,4 +472,195 @@ fn closed_profile_byte_schema_rejects_extensions_duplicates_thinking_and_credent
     trailing.push(0xf6);
     assert!(guest::ChatProfile::decode(&trailing).is_err());
     assert!(guest::ChatProfile::decode(b"\xa2\x65model\x61m\x65model\x61m").is_err());
+}
+
+#[test]
+fn openai_compatible_profile_sends_no_extensions_tolerates_reasoning_and_keeps_opencode_bytes() {
+    let base = "https://api.example.com/v1";
+    let def = guest::openai_compatible_definition(
+        MemoryProfile::IntentsStrategyTactics,
+        base,
+        "qwen3.8-flash",
+        "Assist the operator.",
+    )
+    .unwrap();
+    let parsed = guest::ChatProfile::decode(def.inference_profile_bytes()).unwrap();
+    assert_eq!(parsed.provider, guest::Provider::OpenAiCompatible);
+    assert_eq!(parsed.reasoning_effort, None);
+    // The original profile keeps its exact provider string, so existing Definitions are unchanged.
+    let original = profile(MemoryProfile::IntentsStrategyTactics);
+    assert_eq!(
+        guest::ChatProfile::decode(original.inference_profile_bytes())
+            .unwrap()
+            .provider,
+        guest::Provider::OpencodeGo
+    );
+    assert_ne!(def.cid(), original.cid());
+    let mut guest = guest::Guest::new();
+    let initial = guest.step(&bootstrap(&def)).unwrap();
+    let response = guest.step(&activation(&initial, 4)).unwrap();
+    let (id, request) = infer(&response);
+    let cfg = ProviderConfig {
+        base_url: base.into(),
+        model: "qwen3.8-flash".into(),
+        api_key_env: "OPENCODE_API_KEY".into(),
+        ..config()
+    };
+    let body: Value = serde_json::from_slice(
+        &encode_chat_request(&def, request, &cfg, &Limits::default()).unwrap(),
+    )
+    .unwrap();
+    assert!(body.get("thinking").is_none() && body.get("reasoning_effort").is_none());
+    assert_eq!(body["model"], "qwen3.8-flash");
+    // Dated snapshots of the exact configured model are accepted; reasoning stays native DATA.
+    let reply = json!({"model":"qwen3.8-flash-2026-10-01","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"Hi.","reasoning_content":"private"}}]});
+    let normalized = normalize_chat_completion(
+        &serde_json::to_vec(&reply).unwrap(),
+        id,
+        &cfg.model,
+        &Limits::default(),
+    )
+    .unwrap();
+    check_chat_reply_mode(&def, &normalized).unwrap();
+    for other in [
+        "qwen3.8-flash-high",
+        "qwen3.8",
+        "QWEN3.8-flash",
+        "qwen3.8-flash-2026-10-0x",
+    ] {
+        let mut wrong = reply.clone();
+        wrong["model"] = json!(other);
+        assert!(normalize_chat_completion(
+            &serde_json::to_vec(&wrong).unwrap(),
+            id,
+            &cfg.model,
+            &Limits::default()
+        )
+        .is_err());
+    }
+}
+
+fn correction_flow(mut step: impl FnMut(&[u8]) -> Vec<u8>) {
+    let def = guest::openai_compatible_definition(
+        MemoryProfile::IntentsStrategyTactics,
+        "https://api.example.com/v1",
+        "m",
+        "Assist the operator.",
+    )
+    .unwrap();
+    let initial = step(&bootstrap(&def));
+    let mut response = step(&activation(&initial, 0));
+    for (tool, args) in [
+        ("patch_memory", r#"{"intents":"ship 0.0.2"}"#),
+        ("patch_memory", r#"{"intents":["ship 0.0.2"]}"#),
+        ("patch_memory", r#"{"intents":{"release":"ship 0.0.2"}}"#),
+        ("", ""),
+    ] {
+        let (id, _) = infer(&response);
+        let message = if tool.is_empty() {
+            json!({"role":"assistant","content":"Saved."})
+        } else {
+            json!({"role":"assistant","content":null,"tool_calls":[{"id":"c","type":"function","function":{"name":tool,"arguments":args}}]})
+        };
+        let finish = if tool.is_empty() {
+            "stop"
+        } else {
+            "tool_calls"
+        };
+        let body =
+            json!({"model":"m","choices":[{"index":0,"finish_reason":finish,"message":message}]});
+        let normalized = normalize_chat_completion(
+            &serde_json::to_vec(&body).unwrap(),
+            id,
+            "m",
+            &Limits::default(),
+        )
+        .unwrap();
+        response = step(&encoded("inference_reply", |e| {
+            e.map(2).unwrap().str("reply").unwrap();
+            e.writer_mut().write_all(normalized.as_bytes()).unwrap();
+            e.str("request_id").unwrap().u64(id).unwrap();
+        }));
+        if let Output::Error { code } = Output::decode(&response, &Limits::default()).unwrap() {
+            panic!("guest failed after {tool} {args}: {code}");
+        }
+    }
+    assert!(matches!(
+        Output::decode(&response, &Limits::default()).unwrap(),
+        Output::Boundary(_)
+    ));
+}
+
+#[test]
+fn invalid_plane_feedback_lets_the_model_correct_and_still_reach_a_boundary() {
+    let mut guest = guest::Guest::new();
+    correction_flow(|frame| guest.step(frame).unwrap());
+}
+
+#[test]
+#[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
+fn real_openai_compatible_profile_corrections_equal_native_in_wasmi() {
+    let module = std::fs::read(std::env::var_os("RAIV_GUEST_WASM").expect("actual guest")).unwrap();
+    let mut vm = GuestVm::new(&module, VmLimits::default()).unwrap();
+    let mut native = guest::Guest::new();
+    correction_flow(|frame| {
+        let expected = native.step(frame).unwrap();
+        let actual = vm.round_trip(frame).unwrap();
+        assert_eq!(expected, actual);
+        actual
+    });
+}
+
+#[test]
+fn openai_compatible_patch_schema_is_canonical_any_of_while_opencode_keeps_its_bytes() {
+    let plane = [
+        (
+            "anyOf",
+            ValueRef::List(&[
+                ValueRef::Map(&[("type", ValueRef::Text("object"))]),
+                ValueRef::Map(&[("type", ValueRef::Text("null"))]),
+            ]),
+        ),
+        (
+            "description",
+            ValueRef::Text("Object of your own named entries; null deletes this plane"),
+        ),
+    ];
+    let expected = ModelValue::encode(
+        ValueRef::Map(&[
+            ("type", ValueRef::Text("object")),
+            (
+                "properties",
+                ValueRef::Map(&[
+                    ("intents", ValueRef::Map(&plane)),
+                    ("strategy", ValueRef::Map(&plane)),
+                    ("tactics", ValueRef::Map(&plane)),
+                ]),
+            ),
+            ("additionalProperties", ValueRef::Bool(false)),
+        ]),
+        &Limits::default().decode_limits(),
+    )
+    .unwrap();
+    let schema = |def: &Definition| {
+        def.tools()
+            .find(|tool| tool.id == "patch_memory")
+            .unwrap()
+            .arguments_schema
+            .to_vec()
+    };
+    let generic = guest::openai_compatible_definition(
+        MemoryProfile::IntentsStrategyTactics,
+        "https://api.example.com/v1",
+        "m",
+        "Assist.",
+    )
+    .unwrap();
+    assert_eq!(schema(&generic), expected.as_bytes());
+    let original = profile(MemoryProfile::IntentsStrategyTactics);
+    assert_ne!(schema(&original), expected.as_bytes());
+    assert_eq!(
+        schema(&original),
+        schema(&guest::scripted_definition(MemoryProfile::IntentsStrategyTactics).unwrap())
+    );
 }

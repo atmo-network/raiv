@@ -19,11 +19,13 @@ pub struct PlanningContext<'a> {
     pub memory: Option<&'a Memory>,
     pub limits: &'a Limits,
 }
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ToolFailure {
     InvalidArguments,
     PlanningFailed,
 }
+
 impl fmt::Display for ToolFailure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -32,9 +34,11 @@ impl fmt::Display for ToolFailure {
         })
     }
 }
+
 impl core::error::Error for ToolFailure {}
 
 pub type ArgumentValidator = fn(&[u8]) -> Result<(), ToolFailure>;
+
 pub type Planner = for<'context, 'arguments> fn(
     PlanningContext<'context>,
     &'arguments [u8],
@@ -56,6 +60,7 @@ pub enum ToolImplementation {
         plan: Planner,
     },
 }
+
 impl ToolImplementation {
     pub fn control(self) -> ToolControl {
         match self {
@@ -89,6 +94,7 @@ pub enum ToolSetError {
     MemoryDisabled,
     DefinitionMismatch,
 }
+
 impl fmt::Display for ToolSetError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -109,6 +115,7 @@ impl fmt::Display for ToolSetError {
         })
     }
 }
+
 impl core::error::Error for ToolSetError {}
 
 /// An exact Definition/registration bijection, borrowed without payload/metadata allocation.
@@ -133,6 +140,7 @@ pub struct ToolSet<'a> {
     definition: DaslCid,
     registrations: &'a [ToolRegistration<'a>],
 }
+
 impl<'a> ToolSet<'a> {
     pub fn bind(
         definition: &Definition,
@@ -189,9 +197,11 @@ impl<'a> ToolSet<'a> {
             registrations,
         })
     }
+
     pub fn definition_cid(&self) -> DaslCid {
         self.definition
     }
+
     /// Lookup only a whitelisted/bound ID, borrowing compiled registration metadata.
     /// Unknown names do not dispatch to a fallback or invoke callbacks.
     pub fn lookup(&self, id: &str) -> Option<BoundTool<'a>> {
@@ -204,6 +214,7 @@ impl<'a> ToolSet<'a> {
             implementation: registered.implementation,
         })
     }
+
     /// Borrow descriptor views in Definition order after checking its exact CID.
     pub fn tools<'view>(
         &'view self,
@@ -230,10 +241,12 @@ pub struct BoundTool<'a> {
     descriptor: ToolDescriptorView<'a>,
     implementation: ToolImplementation,
 }
+
 impl<'a> BoundTool<'a> {
     pub fn descriptor(self) -> ToolDescriptorView<'a> {
         self.descriptor
     }
+
     pub fn implementation(self) -> ToolImplementation {
         self.implementation
     }

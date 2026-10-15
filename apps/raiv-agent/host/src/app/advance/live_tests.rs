@@ -1,4 +1,5 @@
 //! Trusted native provider-port witnesses, actual VM only; not live TLS/authentication proof.
+
 use super::*;
 use crate::app::initialize;
 use raiv::{
@@ -23,10 +24,12 @@ use std::{
     path::PathBuf,
     sync::atomic::{AtomicU64, Ordering},
 };
+
 #[path = "live_smoke.rs"]
 mod live_smoke;
 #[path = "reasoning_tests.rs"]
 mod reasoning_tests;
+
 #[test]
 #[ignore = "actual WASM offline native diagnostic binding; no credential lookup/network"]
 fn actual_native_provider_preflight_diagnostic_is_typed_and_preserves_checkpoint_and_world() {
@@ -77,13 +80,16 @@ fn actual_native_provider_preflight_diagnostic_is_typed_and_preserves_checkpoint
     let manifest = CheckpointManifest::decode(&main, &bounds()).unwrap();
     assert!(manifest.admissions().is_empty());
 }
+
 static NEXT: AtomicU64 = AtomicU64::new(0);
+
 struct Home {
     root: PathBuf,
     config: Config,
     module: Vec<u8>,
     retain: bool,
 }
+
 impl Drop for Home {
     fn drop(&mut self) {
         if !self.retain {
@@ -91,10 +97,12 @@ impl Drop for Home {
         }
     }
 }
+
 impl Home {
     fn new() -> Self {
         Self::configured(|source| source)
     }
+
     fn configured(configure: impl FnOnce(String) -> String) -> Self {
         let path = std::env::var_os("RAIV_GUEST_WASM").expect("actual module");
         let module = fs::read(&path).unwrap();
@@ -161,9 +169,11 @@ impl Home {
         home.input(1, Cause::ActorWake, None, 16);
         home
     }
+
     fn main(&self) -> Vec<u8> {
         fs::read(self.config.directory.join("raiv-manifest.cbor")).unwrap()
     }
+
     fn world(&self) -> Vec<u8> {
         fs::read(
             self.config
@@ -175,6 +185,7 @@ impl Home {
         )
         .unwrap()
     }
+
     fn select(&self) -> ([u8; 32], LocalRecoveryPin) {
         let raw = self.main();
         let data = CheckpointManifest::decode(&raw, &bounds()).unwrap();
@@ -199,6 +210,7 @@ impl Home {
             pin,
         )
     }
+
     fn input(&self, index: u8, cause: Cause, receipt: Option<&[u8]>, calls: u64) {
         let grant = BudgetAdmission {
             admission_id: [0x80 + index; 32],
@@ -232,6 +244,7 @@ impl Home {
         )
         .unwrap();
     }
+
     fn drive(&self, port: &mut Mock, cause: Cause) -> Result<String> {
         let digest = hex(&DaslCid::for_block(DaslCodec::Raw, &self.world()).digest());
         execute_using(
@@ -249,6 +262,7 @@ impl Home {
             Some(port),
         )
     }
+
     fn snapshot(&self) -> RestoredAgent {
         let raw = self.main();
         let data = CheckpointManifest::decode(&raw, &bounds()).unwrap();
@@ -259,6 +273,7 @@ impl Home {
         .unwrap();
         data.restore(&store, &Limits::default()).unwrap()
     }
+
     fn settle(&self) -> Vec<u8> {
         let (digest, pin) = self.select();
         let caller = Limits::default();
@@ -320,9 +335,11 @@ impl Home {
         world.state().ledger().receipt_bytes(id).unwrap().to_vec()
     }
 }
+
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
+
 fn limits(config: &Config) -> LocalExecutorLimits {
     LocalExecutorLimits {
         executor: ExecutorLimits {
@@ -333,6 +350,7 @@ fn limits(config: &Config) -> LocalExecutorLimits {
         caller: Limits::default(),
     }
 }
+
 enum Frame {
     Finish(&'static str),
     FinishWithoutReasoning(&'static str),
@@ -345,6 +363,7 @@ enum Frame {
     WrongId,
     Incomplete,
 }
+
 struct Mock {
     frames: VecDeque<Frame>,
     prepared: usize,
@@ -358,6 +377,7 @@ struct Mock {
     thoughts: Vec<String>,
     request_sizes: Vec<usize>,
 }
+
 impl Mock {
     fn new(frames: impl IntoIterator<Item = Frame>) -> Self {
         Self {
@@ -375,10 +395,12 @@ impl Mock {
         }
     }
 }
+
 impl ProviderPort for Mock {
     fn guest_refused(&mut self, category: &'static str) {
         self.refused.push(category);
     }
+
     fn prepare(&mut self, definition: &Definition, input: &ActivationInput) -> Result<()> {
         self.prepared += 1;
         self.reasoning_effort = guest::ChatProfile::decode(definition.inference_profile_bytes())
@@ -395,6 +417,7 @@ impl ProviderPort for Mock {
         }
         Ok(())
     }
+
     fn complete(&mut self, id: u64, payload: &[u8], caller: &Limits) -> Result<NormalizedReply> {
         self.calls += 1;
         self.request_sizes.push(payload.len());
@@ -537,6 +560,7 @@ impl ProviderPort for Mock {
         )?)
     }
 }
+
 fn self_config_stream() -> raiv_agent_host::inference::sse::StreamLimits {
     raiv_agent_host::inference::sse::StreamLimits {
         max_wire_bytes: 1048576,
@@ -544,6 +568,7 @@ fn self_config_stream() -> raiv_agent_host::inference::sse::StreamLimits {
         max_events: 4096,
     }
 }
+
 #[test]
 #[ignore = "owned-PTY interactive exit witness: use script with selected actual guest and ESC input"]
 fn owned_tty_interactive_command_exit_without_submit_never_admits_or_calls_provider() {
@@ -579,12 +604,14 @@ fn owned_tty_interactive_command_exit_without_submit_never_admits_or_calls_provi
     assert_eq!(home.main(), before);
     assert_eq!(home.world(), world);
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn actual_interactive_controller_admits_only_current_prompt_and_approved_known_continuation_without_transcript_or_effect_replay(
 ) {
     interactive_continuation(Home::new());
 }
+
 fn interactive_continuation(home: Home) {
     use crate::app::interactive::{verify_initial, Controller, GrantPlan};
     use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
@@ -756,6 +783,7 @@ fn interactive_continuation(home: Home) {
     assert!(rendered.contains("Native mock reply."));
     assert!(!rendered.contains("NATIVE_ONLY_THOUGHT"));
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn actual_interactive_controller_unknown_attempt_or_pending_action_is_blocked_never_relaunches() {
@@ -836,6 +864,7 @@ fn actual_interactive_controller_unknown_attempt_or_pending_action_is_blocked_ne
         .is_err());
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn actual_bounded_memory_two_call_envelope_matches_live_smoke_without_network() {
@@ -884,6 +913,7 @@ fn actual_bounded_memory_two_call_envelope_matches_live_smoke_without_network() 
     assert_eq!(mock.calls, 2);
     assert_eq!(home.snapshot().state().revision(), 1);
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn actual_live_driver_sparse_patch_yield_installed_ledger_resume_fresh_wake_without_effect_replay()
@@ -990,6 +1020,7 @@ fn actual_live_driver_sparse_patch_yield_installed_ledger_resume_fresh_wake_with
         expected.as_bytes()
     );
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn actual_live_failures_keep_launched_no_boundary_no_relaunch_and_prepare_failure_is_unattempted() {
@@ -1030,7 +1061,7 @@ fn actual_live_failures_keep_launched_no_boundary_no_relaunch_and_prepare_failur
         if wrong_id {
             assert_eq!(mock.refused, ["request_correlation"]);
         } else if bad {
-            assert_eq!(mock.refused, ["guest_failure", "guest_activation_failed"]);
+            assert_eq!(mock.refused, ["guest_failure", "guest_budget_exhausted"]);
         } else if wrong_mode {
             assert_eq!(mock.refused, ["reply_mode"]);
         } else {

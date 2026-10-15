@@ -1,7 +1,9 @@
-//! Maps exact validated guest ModelRequest DATA into the compiled OpenCode Chat provider format.
+//! Maps exact validated guest ModelRequest DATA into the selected Chat Completions provider format.
 //! Does not build/truncate context, choose tools, approve a Definition/run or perform HTTP.
+
 mod continuation;
 mod turns;
+
 use super::{http::ProviderConfig, Writer};
 use crate::output::Request;
 pub use continuation::ReasoningSession;
@@ -12,6 +14,7 @@ use raiv::{
 };
 use serde_json::{json, Value};
 use std::fmt;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RequestError {
     Binding,
@@ -22,6 +25,7 @@ pub enum RequestError {
     ReplyMode,
     Continuation,
 }
+
 impl fmt::Display for RequestError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -39,7 +43,9 @@ impl fmt::Display for RequestError {
         })
     }
 }
+
 impl std::error::Error for RequestError {}
+
 fn value(bytes: &[u8], bounds: &DecodeLimits) -> Result<Value, RequestError> {
     if bounds.max_depth > 64 {
         return Err(RequestError::Limit);
@@ -93,6 +99,7 @@ fn value(bytes: &[u8], bounds: &DecodeLimits) -> Result<Value, RequestError> {
     }
     item(&mut minicbor::Decoder::new(bytes))
 }
+
 /// Native caller still owns approved module/Definition/Run/RequestTicket and credential binding.
 /// Explicit compiled thinking:false selects a disabled-thinking request, not implicit reasoning loss.
 pub fn encode_chat_request(
@@ -103,6 +110,7 @@ pub fn encode_chat_request(
 ) -> Result<Vec<u8>, RequestError> {
     encode_inner(definition, request, config, caller, None)
 }
+
 fn encode_inner(
     definition: &Definition,
     request: Request<'_>,
@@ -181,7 +189,11 @@ fn encode_inner(
     if let Some(records) = records {
         continuation::attach(records, &mut messages, caller)?;
     }
-    let mut body = json!({"model":profile.model,"messages":messages,"max_tokens":config.max_tokens,"stream":config.stream,"n":1,"thinking":{"type":"disabled"}});
+    let mut body = json!({"model":profile.model,"messages":messages,"max_tokens":config.max_tokens,"stream":config.stream,"n":1});
+    // `thinking` is a DeepSeek extension; generic OpenAI-compatible requests carry no extensions.
+    if profile.provider == guest::Provider::OpencodeGo {
+        body["thinking"] = json!({"type":"disabled"});
+    }
     // Tool-free inference is valid; omit API fields that require a nonempty tool list.
     if !tools.is_empty() {
         body["tools"] = json!(tools);
@@ -202,14 +214,20 @@ fn encode_inner(
     serde_json::to_writer(&mut writer, &body).map_err(|_| RequestError::Limit)?;
     Ok(writer.bytes)
 }
+
 /// Enabled tool turns need replayable reasoning; a complete no-call final has no continuation.
 /// Disabled mode still rejects nonempty reasoning. Completeness is proven by normalization/EOF.
+/// A generic OpenAI-compatible profile requested no reasoning mode, so provider reasoning text
+/// is transient DATA that is never replayed, stored or shown to the guest.
 pub fn check_chat_reply_mode(
     definition: &Definition,
     reply: &super::NormalizedReply,
 ) -> Result<(), RequestError> {
     let profile = guest::ChatProfile::decode(definition.inference_profile_bytes())
         .map_err(|_| RequestError::Binding)?;
+    if profile.provider == guest::Provider::OpenAiCompatible {
+        return Ok(());
+    }
     if profile.reasoning_effort.is_some() {
         if reply.reasoning_content().is_some() {
             return Ok(());
@@ -231,5 +249,6 @@ pub fn check_chat_reply_mode(
     }
     Ok(())
 }
+
 #[cfg(test)]
 mod tests;

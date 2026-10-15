@@ -1,5 +1,7 @@
 //! Application lifecycle witnesses with synthetic provider thoughts; never network/credential access.
+
 use super::*;
+
 fn home(effort: &str) -> Home {
     Home::configured(|s| {
         s.replace(
@@ -8,6 +10,7 @@ fn home(effort: &str) -> Home {
         )
     })
 }
+
 fn private_storage(path: &Path) {
     for entry in fs::read_dir(path).unwrap() {
         let entry = entry.unwrap();
@@ -23,6 +26,7 @@ fn private_storage(path: &Path) {
         }
     }
 }
+
 #[test]
 #[ignore = "actual WASM offline reasoning driver lifecycle; no network/key"]
 fn actual_reasoning_application_patch_correction_finish_fresh_source_and_ui_do_not_restore_thought()
@@ -77,6 +81,7 @@ fn actual_reasoning_application_patch_correction_finish_fresh_source_and_ui_do_n
     // Same production execute_request via actual Controller/TerminalUi, with fresh UI and known commit.
     interactive_continuation(home("high"));
 }
+
 #[test]
 #[ignore = "actual WASM natural Finish from complete JSON/SSE no-call reply; no network/key"]
 fn actual_natural_finish_commits_memory_and_text_once_with_no_finish_tool_call_or_reasoning_replay()
@@ -174,6 +179,7 @@ fn actual_natural_finish_commits_memory_and_text_once_with_no_finish_tool_call_o
         private_storage(&home.root);
     }
 }
+
 #[test]
 #[ignore = "actual WASM offline reasoning yield/resume; no network/key"]
 fn actual_reasoning_resume_requires_installed_receipt_and_starts_without_previous_episode_thought()
@@ -205,6 +211,7 @@ fn actual_reasoning_resume_requires_installed_receipt_and_starts_without_previou
     assert_eq!(snapshot.history().next().unwrap().boundary_count(), 2);
     private_storage(&home.root);
 }
+
 #[test]
 #[ignore = "actual WASM offline aggregate reasoning retention bound; no network/key"]
 fn actual_reasoning_aggregate_retention_overflow_discards_ram_patch_without_sixth_exposure() {
@@ -233,6 +240,7 @@ fn actual_reasoning_aggregate_retention_overflow_discards_ram_patch_without_sixt
     assert_eq!(home.world(), world);
     private_storage(&home.root);
 }
+
 #[test]
 #[ignore = "actual WASM offline reasoning failure/bounds/no-relaunch; no network/key"]
 fn actual_reasoning_missing_mode_stream_correlation_and_retention_failure_keep_launched_old_root() {
@@ -283,6 +291,7 @@ fn actual_reasoning_missing_mode_stream_correlation_and_retention_failure_keep_l
         private_storage(&home.root);
     }
 }
+
 #[test]
 #[ignore = "actual WASM offline full reasoning request cap; no network/key"]
 fn actual_reasoning_combined_request_overflow_refuses_before_second_exposure() {

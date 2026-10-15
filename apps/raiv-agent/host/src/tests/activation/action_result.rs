@@ -1,4 +1,5 @@
 //! Local administrative Receipt DATA approval, not an executor ledger/effect proof.
+
 use super::*;
 use crate::{
     admission::{AdmissionBook, AdmissionError, AdmissionStatus},
@@ -13,6 +14,7 @@ use raiv::{
     position::Position,
     receipt::{Outcome, Receipt, ReceiptSpec},
 };
+
 pub(super) fn receipt(source: &RestoredAgent, outcome: Outcome) -> Receipt {
     let current = source.current_episode().unwrap();
     let boundary = source
@@ -43,6 +45,7 @@ pub(super) fn receipt(source: &RestoredAgent, outcome: Outcome) -> Receipt {
     )
     .unwrap()
 }
+
 pub(super) fn input(receipt: &Receipt, event: u8, grant: u8) -> ActivationInput {
     ActivationInput::encode(
         &ActivationInputSpec {
@@ -61,6 +64,7 @@ pub(super) fn input(receipt: &Receipt, event: u8, grant: u8) -> ActivationInput 
     )
     .unwrap()
 }
+
 fn pending_registry(wasm: &[u8]) -> Registry {
     let source = candidate::source();
     let packet = candidate::prepared(&source, &packet());
@@ -74,6 +78,7 @@ fn pending_registry(wasm: &[u8]) -> Registry {
     registry.publish_approved(approved);
     registry
 }
+
 #[test]
 fn action_result_native_approval_and_pending_identity_precede_atomic_reservation() {
     let wasm = output::invalid_output_module();
@@ -124,6 +129,7 @@ fn action_result_native_approval_and_pending_identity_precede_atomic_reservation
     assert!(book.is_empty());
     assert_eq!(registered.anchor().revision, 1);
 }
+
 #[test]
 fn every_terminal_outcome_preserves_exact_receipt_input_grant_and_reserved_ids_without_releasing_on_drop(
 ) {
@@ -163,6 +169,7 @@ fn every_terminal_outcome_preserves_exact_receipt_input_grant_and_reserved_ids_w
         assert_eq!(book.record([0xb0; 32], [0x61; 32]), Some(before));
     }
 }
+
 #[test]
 fn retained_events_and_embedding_receipt_bounds_fail_before_native_ownership() {
     let wasm = output::invalid_output_module();
@@ -223,6 +230,7 @@ pub(super) mod durable {
         recovery::{adopt_local, resume_reserved},
     };
     use raiv::{format::DecodeLimits, state::Continuation};
+
     fn caps() -> ManifestLimits {
         ManifestLimits {
             wire: DecodeLimits::default(),
@@ -230,6 +238,7 @@ pub(super) mod durable {
             max_admissions: 10,
         }
     }
+
     pub(in crate::tests::activation) fn pending(
     ) -> (Vec<u8>, Registry, AdmissionBook, DiskBlockStore, Directory) {
         let wasm = wasm();
@@ -297,6 +306,7 @@ pub(super) mod durable {
         .unwrap();
         (wasm, registry, book, disk, directory)
     }
+
     #[test]
     #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
     fn failed_receipt_resumes_same_episode_and_retry_gets_new_action_then_success_finishes_with_retained_counts(
@@ -446,6 +456,7 @@ pub(super) mod durable {
             .billed_units
             .is_none()));
     }
+
     #[test]
     #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
     fn action_result_reserved_restart_preserves_approved_exact_receipt_grant_and_matches_pending_before_reissue(

@@ -1,4 +1,5 @@
 //! Durable local reservation/launch exposure gate; no pricing/lost-unit/dispatch policy.
+
 use crate::{
     admission::{AdmissionBook, AdmissionError, AdmissionStatus, AdmittedInput},
     checkpoint::{CheckpointError, CheckpointManifest, ManifestLimits},
@@ -8,8 +9,10 @@ use crate::{
 };
 use raiv::limits::Limits;
 use std::fmt;
+
 #[cfg(test)]
 mod tests;
+
 #[derive(Debug)]
 pub enum LaunchError {
     Admission(AdmissionError),
@@ -20,6 +23,7 @@ pub enum LaunchError {
     MissingManifest,
     Conflict,
 }
+
 impl fmt::Display for LaunchError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -33,7 +37,9 @@ impl fmt::Display for LaunchError {
         })
     }
 }
+
 impl std::error::Error for LaunchError {}
+
 /// Persist a RAM-approved Reserved token's exact Input block and metadata. The prior
 /// manifest must be the same approved checkpoint/book minus only this reservation.
 /// Failure never frees the RAM reservation/token; it remains available for locked retry.
@@ -80,6 +86,7 @@ pub fn record_reserved(
         .map_err(LaunchError::Manifest)?;
     Ok(())
 }
+
 /// Attempted is fsynced before any guest VM is created. Launched is fsynced before a
 /// Run/provider request can leave this function. Attempt-publication uncertainty
 /// conservatively marks Attempted and blocks relaunch; existing Attempted file bytes

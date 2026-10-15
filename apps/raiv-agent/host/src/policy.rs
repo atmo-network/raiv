@@ -1,4 +1,5 @@
 //! Local approved-source baseline/current-pin ports. Exported pins remain metadata.
+
 use crate::{
     admission::AdmissionBook,
     checkpoint::{CheckpointError, CheckpointManifest, ManifestLimits},
@@ -12,8 +13,10 @@ use raiv::{
     state::Continuation,
 };
 use std::fmt;
+
 #[cfg(test)]
 mod tests;
+
 #[derive(Debug)]
 pub enum PolicyError {
     NotGenesis,
@@ -26,6 +29,7 @@ pub enum PolicyError {
     Manifest(ManifestError),
     Graph(raiv::graph::GraphError),
 }
+
 impl fmt::Display for PolicyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -43,7 +47,9 @@ impl fmt::Display for PolicyError {
         })
     }
 }
+
 impl std::error::Error for PolicyError {}
+
 fn captured(
     registered: &RegisteredAgent,
     book: &AdmissionBook,
@@ -60,6 +66,7 @@ fn captured(
     };
     Ok((data, bytes, pin))
 }
+
 /// Native approved genesis -> one empty locked directory. Existing exact metadata can
 /// be acknowledged; missing metadata amid ANY existing bytes/orphans is not genesis.
 /// Partial pre-publication staging is fail-closed after process loss, never auto-cleaned.
@@ -119,6 +126,7 @@ pub fn initialize_local(
         .map_err(PolicyError::Manifest)?;
     Ok(pin)
 }
+
 /// Export metadata from the ALREADY APPROVED RAM head/book, not a decoded/imported head.
 /// Exact file equality and whole required-closure readback/fsync precede return. This
 /// neither stores a second authority file nor proves authenticity/global currentness:

@@ -5,6 +5,7 @@ use crate::{
     tests::activation::{admission, output},
 };
 use raiv::format::DecodeLimits;
+
 fn caps() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -12,6 +13,7 @@ fn caps() -> ManifestLimits {
         max_admissions: 10,
     }
 }
+
 #[test]
 fn zero_attempt_input_reissue_is_atomic_single_use_and_never_recovers_an_original_issued_token() {
     let wasm = output::invalid_output_module();

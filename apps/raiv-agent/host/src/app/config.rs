@@ -1,4 +1,5 @@
 //! Closed bootstrap metadata, no credential/transport access; omitted effort preserves disabled mode.
+
 use super::{fail, read_bounded, Result};
 use raiv::definition::{Definition, MemoryProfile};
 use raiv_agent_host::inference::{http::ProviderConfig, sse::StreamLimits};
@@ -7,6 +8,7 @@ use std::{
     str::FromStr,
     time::Duration,
 };
+
 pub struct Config {
     pub profile: MemoryProfile,
     pub agent: [u8; 32],
@@ -17,13 +19,17 @@ pub struct Config {
     pub live: Option<ProviderConfig>,
     pub mandate: Option<String>,
     pub reasoning_effort: Option<guest::ReasoningEffort>,
+    /// Closed provider family; an absent `provider` key keeps the original `opencode-go` meaning.
+    pub provider: guest::Provider,
 }
+
 pub struct WorldConfig {
     pub directory: PathBuf,
     pub id: [u8; 32],
     pub units: u64,
     pub capacity: usize,
 }
+
 pub fn decimal(value: &str) -> Result<u64> {
     if value.is_empty()
         || !value.bytes().all(|b| b.is_ascii_digit())
@@ -35,6 +41,7 @@ pub fn decimal(value: &str) -> Result<u64> {
         .parse()
         .map_err(|_| fail("unsigned decimal text exceeds u64"))
 }
+
 fn positive(data: &toml::Table, key: &str) -> Result<u64> {
     data.get(key)
         .and_then(toml::Value::as_integer)
@@ -42,6 +49,7 @@ fn positive(data: &toml::Table, key: &str) -> Result<u64> {
         .filter(|n| *n > 0)
         .ok_or_else(|| fail("configuration requires positive bounded integers"))
 }
+
 fn table<'a>(value: &'a toml::Table, key: &str, keys: &[&str]) -> Result<&'a toml::Table> {
     let data = value
         .get(key)
@@ -52,17 +60,20 @@ fn table<'a>(value: &'a toml::Table, key: &str, keys: &[&str]) -> Result<&'a tom
     }
     Ok(data)
 }
+
 fn text<'a>(data: &'a toml::Table, key: &str) -> Result<&'a str> {
     data.get(key)
         .and_then(toml::Value::as_str)
         .ok_or_else(|| fail("configuration requires text fields"))
 }
+
 fn exact(data: &toml::Table, key: &str, wanted: &str) -> Result<()> {
     if text(data, key)? != wanted {
         return Err(fail("unsupported bootstrap configuration selector"));
     }
     Ok(())
 }
+
 pub fn id(text: &str) -> Result<[u8; 32]> {
     if text.len() != 64
         || !text
@@ -80,6 +91,7 @@ pub fn id(text: &str) -> Result<[u8; 32]> {
     }
     Ok(out)
 }
+
 impl Config {
     /// Deterministic metadata only. No environment key lookup, provider or native Guest decisions.
     pub fn definition(&self) -> Result<Definition> {
@@ -89,6 +101,14 @@ impl Config {
                 .as_deref()
                 .ok_or_else(|| fail("live mandate missing"))?;
             match self.reasoning_effort {
+                None if self.provider == guest::Provider::OpenAiCompatible => {
+                    guest::openai_compatible_definition(
+                        self.profile,
+                        &live.base_url,
+                        &live.model,
+                        mandate,
+                    )?
+                }
                 Some(effort) => guest::opencode_reasoning_definition(
                     self.profile,
                     &live.base_url,
@@ -107,12 +127,14 @@ impl Config {
             guest::scripted_definition(self.profile)?
         })
     }
+
     pub fn load(path: &Path) -> Result<Self> {
         let bytes = read_bounded(path, 16384)?;
         let source =
             std::str::from_utf8(&bytes).map_err(|_| fail("configuration must be UTF-8"))?;
         Self::parse(source, path.parent().unwrap_or(Path::new(".")))
     }
+
     fn parse(source: &str, base: &Path) -> Result<Self> {
         if source.len() > 16384 {
             return Err(fail("configuration byte limit"));
@@ -143,6 +165,16 @@ impl Config {
             .as_table()
             .ok_or_else(|| fail("missing inference table"))?;
         let scripted = text(protocol, "protocol")? == "scripted";
+        let provider = match protocol.get("provider").map(toml::Value::as_str) {
+            None => guest::Provider::OpencodeGo,
+            Some(Some("opencode-go")) => guest::Provider::OpencodeGo,
+            Some(Some("openai-compatible")) => guest::Provider::OpenAiCompatible,
+            Some(_) => {
+                return Err(fail(
+                    "provider must be opencode-go or openai-compatible; omit for opencode-go",
+                ))
+            }
+        };
         let agent = table(
             &root,
             "agent",
@@ -185,8 +217,13 @@ impl Config {
             if protocol.contains_key("reasoning_effort") {
                 keys.push("reasoning_effort");
             }
+            if protocol.contains_key("provider") {
+                keys.push("provider");
+            }
             let inference = table(&root, "inference", &keys)?;
-            exact(inference, "api_key_env", "OPENCODE_API_KEY")?;
+            if provider == guest::Provider::OpencodeGo {
+                exact(inference, "api_key_env", "OPENCODE_API_KEY")?;
+            }
             let max_request_bytes = positive(inference, "max_request_bytes")?;
             let max_response_bytes = positive(inference, "max_response_bytes")?;
             if max_request_bytes > 8_388_608 || max_response_bytes > 8_388_608 {
@@ -226,6 +263,11 @@ impl Config {
                 )),
             }),
         };
+        if reasoning_effort.is_some() && provider != guest::Provider::OpencodeGo {
+            return Err(fail(
+                "reasoning_effort is an opencode-go extension; openai-compatible has none",
+            ));
+        }
         let mandate = if scripted {
             None
         } else {
@@ -286,6 +328,7 @@ impl Config {
             live,
             mandate,
             reasoning_effort,
+            provider,
         };
         // Enabled mode must be supported by the compiled guest, not guessed from catalogue DATA.
         if reasoning_effort.is_some() {
@@ -294,9 +337,11 @@ impl Config {
         Ok(config)
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     fn sample() -> String {
         format!(
             r#"schema_version=1
@@ -322,6 +367,7 @@ adapter="local"
             "01".repeat(32)
         )
     }
+
     #[test]
     fn exact_offline_subset_preserves_paths_and_rejects_duplicates_unknown_fields_and_live_selectors(
     ) {
@@ -345,6 +391,7 @@ adapter="local"
             assert!(!error.contains("do-not-echo-me"));
         }
     }
+
     #[test]
     fn world_configuration_is_optional_closed_and_bounds_full_width_funding_without_credential_lookup(
     ) {
@@ -368,6 +415,44 @@ adapter="local"
         }
         assert_eq!(decimal("0").unwrap(), 0);
     }
+
+    #[test]
+    fn openai_compatible_provider_is_explicit_names_its_own_key_and_has_no_extensions() {
+        let live = r#"protocol="openai-chat-completions"
+provider="openai-compatible"
+model="qwen3.8-flash"
+base_url="https://api.example.com/v1"
+api_key_env="EXAMPLE_API_KEY"
+stream=true
+max_tokens=1024
+max_request_bytes=262144
+max_response_bytes=1048576
+max_header_bytes=16384
+timeout_ms=60000
+max_stream_event_bytes=65536
+max_stream_events=4096"#;
+        let source = sample()
+            .replace("id=", "mandate=\"Assist the operator.\"\nid=")
+            .replace("protocol=\"scripted\"\nmodel=\"fixture-model\"", live);
+        let config = Config::parse(&source, Path::new("/owned")).unwrap();
+        assert_eq!(config.provider, guest::Provider::OpenAiCompatible);
+        assert_eq!(config.live.as_ref().unwrap().api_key_env, "EXAMPLE_API_KEY");
+        let def = config.definition().unwrap();
+        let profile = guest::ChatProfile::decode(def.inference_profile_bytes()).unwrap();
+        assert_eq!(profile.provider, guest::Provider::OpenAiCompatible);
+        assert_eq!(profile.model, "qwen3.8-flash");
+        for bad in [
+            source.replace("openai-compatible", "openai"),
+            source.replace("EXAMPLE_API_KEY", "not a name"),
+            source.replace("stream=true", "stream=true\nreasoning_effort=\"high\""),
+            source
+                .replace("provider=\"openai-compatible\"\n", "")
+                .replace("EXAMPLE_API_KEY", "OTHER_API_KEY"),
+        ] {
+            assert!(Config::parse(&bad, Path::new("/owned")).is_err());
+        }
+    }
+
     #[test]
     fn live_configuration_is_closed_bounded_data_only_and_definition_binding_is_exact() {
         let source = sample()
@@ -452,6 +537,7 @@ max_stream_events=4096"#,
             assert!(!error.contains("do-not-echo-me"));
         }
     }
+
     #[test]
     fn reasoning_config_is_explicit_closed_data_only_and_preserves_absent_mode_definition() {
         let source = include_str!("../../../raiv-agent.opencode.toml");
@@ -516,6 +602,7 @@ max_stream_events=4096"#,
         )
         .is_err());
     }
+
     #[test]
     fn identifiers_are_exact_not_synonyms_or_unicode_slices() {
         for v in [

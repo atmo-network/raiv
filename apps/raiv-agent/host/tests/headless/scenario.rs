@@ -1,4 +1,5 @@
 //! Real runnable bounded reference recipe, checked against an independent preferred-CBOR oracle.
+
 use super::wake::fields;
 use super::*;
 use raiv::{format::DecodeLimits, limits::Limits, state::Continuation};
@@ -8,6 +9,7 @@ use raiv_agent_host::{
     disk::DiskBlockStore,
     simulator::{checkpoint::ExecutorLimits, world::WorldState},
 };
+
 fn run(config: &Path) -> Output {
     Command::new(env!("CARGO_BIN_EXE_raiv-agent"))
         .args([
@@ -21,12 +23,14 @@ fn run(config: &Path) -> Output {
         .output()
         .unwrap()
 }
+
 fn bytes(hex: &str) -> Vec<u8> {
     (0..hex.len())
         .step_by(2)
         .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap())
         .collect()
 }
+
 #[test]
 #[ignore = "build actual Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_retry_and_sleep_runner_fresh_adopts_five_times_reaches_second_wake_and_matches_independent_bytes_without_replay(

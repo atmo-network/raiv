@@ -4,6 +4,7 @@ use crate::{
     tests::activation::{admission, output},
 };
 use raiv::format::DecodeLimits;
+
 fn caps() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -11,6 +12,7 @@ fn caps() -> ManifestLimits {
         max_admissions: 10,
     }
 }
+
 fn baseline(disk: &mut DiskBlockStore, registered: &RegisteredAgent, book: &AdmissionBook) {
     disk.place(registered.snapshot()).unwrap();
     let bytes = CheckpointManifest::capture(registered, book, &caps())
@@ -19,6 +21,7 @@ fn baseline(disk: &mut DiskBlockStore, registered: &RegisteredAgent, book: &Admi
         .unwrap();
     disk.manifest(caps().wire).replace(None, &bytes).unwrap();
 }
+
 #[test]
 fn reserved_input_exact_bytes_unknown_metadata_retry_and_failed_boot_are_durable_and_never_refunded(
 ) {
@@ -131,6 +134,7 @@ fn reserved_input_exact_bytes_unknown_metadata_retry_and_failed_boot_are_durable
     ));
     assert_eq!(disk.manifest(caps().wire).read().unwrap().unwrap(), bytes);
 }
+
 #[test]
 fn source_absence_conflict_wrong_module_caps_and_missing_input_do_not_attempt_vm_creation() {
     let wasm = output::invalid_output_module();

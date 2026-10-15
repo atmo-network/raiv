@@ -1,4 +1,5 @@
 //! Volatile transaction evidence only; never persistence/finality/effect authorization.
+
 use super::*;
 use crate::{
     acceptance::{accept_ram, AcceptanceError},
@@ -8,6 +9,7 @@ use crate::{
     store::{MemoryBlockStore, StoreLimits},
 };
 use raiv::{format::DecodeLimits, graph::MaterializedBlocks};
+
 fn store() -> MemoryBlockStore {
     MemoryBlockStore::new(StoreLimits {
         max_blocks: 1000,
@@ -15,6 +17,7 @@ fn store() -> MemoryBlockStore {
         wire: DecodeLimits::default(),
     })
 }
+
 fn sealed(
     wasm: &[u8],
     registered: &RegisteredAgent,
@@ -33,6 +36,7 @@ fn sealed(
     let sealed = run.into_sealed().unwrap();
     (token, sealed)
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn complete_readback_precedes_atomic_ram_anchor_consumption_and_exact_retry_without_inference() {
@@ -97,6 +101,7 @@ fn complete_readback_precedes_atomic_ram_anchor_consumption_and_exact_retry_with
     );
     assert_eq!(registry.agent([0xb0; 32]).unwrap().anchor(), later);
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn substituted_run_registry_and_competing_stale_anchor_never_consume_or_install_output() {
@@ -153,6 +158,7 @@ fn substituted_run_registry_and_competing_stale_anchor_never_consume_or_install_
     assert_eq!(b.record([0xb0; 32], [0x61; 32]), Some(old_record));
     assert!(two.snapshot().is_some());
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn yield_installs_the_same_embedded_command_only_as_ram_data_and_pending_or_failed_runs_cannot_seal(

@@ -1,10 +1,12 @@
 //! Explicit local administration, not fresh grant/provenance, storage or effect permission.
+
 use super::*;
 use crate::{
     registry::{Registry, RegistryError},
     run::{Phase, ProgramBinding, RunError},
 };
 use raiv::{graph::RestoredAgent, limits::Limits};
+
 pub(super) fn different_agent() -> RestoredAgent {
     let mut init = decode(&frame(1));
     let mut payload = field(&init, "payload").clone();
@@ -19,6 +21,7 @@ pub(super) fn different_agent() -> RestoredAgent {
     };
     RestoredAgent::restore(root, &blocks, &Limits::default()).unwrap()
 }
+
 #[test]
 fn administrative_registration_is_atomic_capacity_bounded_genesis_only_and_never_overwrites() {
     assert!(matches!(
@@ -110,6 +113,7 @@ fn administrative_registration_is_atomic_capacity_bounded_genesis_only_and_never
     ));
     assert!(empty.is_empty());
 }
+
 #[test]
 fn self_supplied_valid_pins_malformed_modules_imports_and_wrong_exports_do_not_approve_code() {
     let mut registry = Registry::new(1).unwrap();
@@ -127,6 +131,7 @@ fn self_supplied_valid_pins_malformed_modules_imports_and_wrong_exports_do_not_a
         assert!(registry.is_empty());
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn registered_anchor_launches_only_its_approved_module_source_and_retains_no_dispatch_or_head_update(

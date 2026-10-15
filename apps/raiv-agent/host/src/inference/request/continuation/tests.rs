@@ -16,6 +16,7 @@ use raiv::{
     preparation::{InputBinding, PreparedInput},
 };
 use serde_json::json;
+
 fn definition(effort: guest::ReasoningEffort) -> Definition {
     guest::opencode_reasoning_definition(
         MemoryProfile::IntentsStrategyTactics,
@@ -26,6 +27,7 @@ fn definition(effort: guest::ReasoningEffort) -> Definition {
     )
     .unwrap()
 }
+
 fn reply(id: u64, tool: &str, args: &str, reason: Option<&str>) -> NormalizedReply {
     let mut body = json!({"model":config().model,"choices":[{"index":0,"finish_reason":"tool_calls","message":{"role":"assistant","content":"","tool_calls":[{"id":"native-call","type":"function","function":{"name":tool,"arguments":args}}]}}]});
     if tool.is_empty() {
@@ -43,6 +45,7 @@ fn reply(id: u64, tool: &str, args: &str, reason: Option<&str>) -> NormalizedRep
     )
     .unwrap()
 }
+
 fn source(def: &Definition) -> (Vec<u8>, RestoredAgent) {
     let initial = guest::Guest::new().step(&bootstrap(def)).unwrap();
     let Output::Initialized { root, blocks } =
@@ -53,6 +56,7 @@ fn source(def: &Definition) -> (Vec<u8>, RestoredAgent) {
     let source = RestoredAgent::restore(root, &blocks, &Limits::default()).unwrap();
     (initial, source)
 }
+
 fn packet(source: &RestoredAgent) -> PreparedInput {
     let input = ActivationInput::encode(
         &ActivationInputSpec {
@@ -94,6 +98,7 @@ fn packet(source: &RestoredAgent) -> PreparedInput {
     )
     .unwrap()
 }
+
 fn binding(module: &[u8], source: &RestoredAgent) -> ProgramBinding {
     ProgramBinding {
         module_digest: DaslCid::for_block(DaslCodec::Raw, module).digest(),
@@ -101,6 +106,7 @@ fn binding(module: &[u8], source: &RestoredAgent) -> ProgramBinding {
         execution_domain: source.definition().execution_domain(),
     }
 }
+
 #[test]
 fn enabled_profile_is_explicit_exact_supported_model_and_reply_mode_never_guesses_or_drops_thought()
 {
@@ -149,6 +155,7 @@ fn enabled_profile_is_explicit_exact_supported_model_and_reply_mode_never_guesse
         assert!(guest::ChatProfile::decode(&raw).is_err());
     }
 }
+
 #[test]
 fn exact_transient_join_preserves_reasoning_only_on_assistant_and_rejects_text_call_args_or_length_substitution(
 ) {
@@ -182,6 +189,7 @@ fn exact_transient_join_preserves_reasoning_only_on_assistant_and_rejects_text_c
         .windows(11)
         .any(|w| w == b"NATIVE_ONLY"));
 }
+
 #[test]
 fn native_reasoning_continuation_preserves_rejected_multicalls_then_no_call_finishes() {
     use minicbor::encode::Write;
@@ -246,6 +254,7 @@ fn native_reasoning_continuation_preserves_rejected_multicalls_then_no_call_fini
         assert_eq!(turns[0]["reasoning_content"], "private multi");
     }
 }
+
 #[test]
 #[ignore = "build fresh reasoning-enabled wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn actual_reasoning_profile_retains_native_json_sse_thought_across_patch_correction_finish_not_guest_or_checkpoint(
@@ -378,6 +387,7 @@ fn actual_reasoning_profile_retains_native_json_sse_thought_across_patch_correct
             .is_empty());
     }
 }
+
 #[test]
 #[ignore = "build fresh reasoning-enabled wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn actual_carrier_foreign_stale_repeated_tickets_limits_and_failed_reuse_are_refused() {

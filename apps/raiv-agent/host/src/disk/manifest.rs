@@ -1,5 +1,6 @@
 //! Atomic canonical-metadata FILE seam, not a typed host acceptance manifest.
 //! Byte CAS proves file continuity only; payload bindings/admission policy belong above.
+
 use super::{DiskBlockStore, DiskError, NEXT_TEMP};
 use crate::store::StoreError;
 use raiv::format::{validate_drisl, DecodeLimits};
@@ -9,14 +10,17 @@ use std::{
     io::{self, Write},
     os::fd::AsRawFd,
 };
+
 #[cfg(test)]
 mod tests;
+
 #[derive(Debug)]
 pub enum ManifestError {
     BeforePublication(DiskError),
     Conflict,
     UnknownOutcome(DiskError),
 }
+
 impl fmt::Display for ManifestError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -29,12 +33,15 @@ impl fmt::Display for ManifestError {
         }
     }
 }
+
 impl std::error::Error for ManifestError {}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Publication {
     Replaced,
     AlreadyPresent,
 }
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Stage {
     TemporaryCreated,
@@ -43,12 +50,14 @@ enum Stage {
     Renamed,
     DirectorySynced,
 }
+
 #[derive(Clone, Copy)]
 enum FileKind {
     Checkpoint,
     Executor,
     World,
 }
+
 /// Mutable borrow prevents a second in-process writer or unlocked block interleaving.
 /// The inherited flock is cooperative; the directory remains operator-owned.
 /// The fixed filename is native metadata, not a new CID-addressed structural record.
@@ -57,6 +66,7 @@ pub struct ManifestFile<'a> {
     wire: DecodeLimits,
     kind: FileKind,
 }
+
 impl<'a> ManifestFile<'a> {
     pub(super) fn new(store: &'a mut DiskBlockStore, wire: DecodeLimits) -> Self {
         Self {
@@ -65,6 +75,7 @@ impl<'a> ManifestFile<'a> {
             kind: FileKind::Checkpoint,
         }
     }
+
     pub(crate) fn executor(store: &'a mut DiskBlockStore, wire: DecodeLimits) -> Self {
         Self {
             store,
@@ -72,6 +83,7 @@ impl<'a> ManifestFile<'a> {
             kind: FileKind::Executor,
         }
     }
+
     pub(crate) fn world(store: &'a mut DiskBlockStore, wire: DecodeLimits) -> Self {
         Self {
             store,
@@ -79,6 +91,7 @@ impl<'a> ManifestFile<'a> {
             kind: FileKind::World,
         }
     }
+
     fn name(&self) -> CString {
         CString::new(match self.kind {
             FileKind::Checkpoint => "raiv-manifest.cbor",
@@ -87,6 +100,7 @@ impl<'a> ManifestFile<'a> {
         })
         .expect("fixed filename")
     }
+
     pub fn read(&self) -> Result<Option<Vec<u8>>, DiskError> {
         let mut file = match self
             .store
@@ -100,6 +114,7 @@ impl<'a> ManifestFile<'a> {
         self.validate(&bytes)?;
         Ok(Some(bytes))
     }
+
     /// None means initialize only an absent file. Existing corruption is never absence.
     /// Exact next bytes already present are re-fsynced/acknowledged without replacement.
     pub fn replace(
@@ -131,9 +146,11 @@ impl<'a> ManifestFile<'a> {
             Ok(())
         })
     }
+
     fn validate(&self, bytes: &[u8]) -> Result<(), DiskError> {
         validate_drisl(bytes, &self.wire).map_err(|e| DiskError::Data(StoreError::Codec(e)))
     }
+
     fn replace_at(
         &mut self,
         expected: Option<&[u8]>,

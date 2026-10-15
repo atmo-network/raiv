@@ -1,9 +1,11 @@
 use super::*;
 use raiv::activation::ReplyError;
 use serde_json::json;
+
 fn completion(arguments: &str) -> Value {
     json!({"model":"deepseek-v4.1-flash","choices":[{"index":0,"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"call-1","type":"function","function":{"name":"patch_memory","arguments":arguments}}]}}]})
 }
+
 fn normalize(value: &Value) -> Result<NormalizedReply, NormalizeError> {
     normalize_chat_completion(
         &serde_json::to_vec(value).unwrap(),
@@ -12,6 +14,7 @@ fn normalize(value: &Value) -> Result<NormalizedReply, NormalizeError> {
         &Limits::default(),
     )
 }
+
 #[test]
 fn noop_wrapped_arguments_are_preserved_exactly_not_created_or_stripped_by_normalization() {
     for (arguments, expected) in [
@@ -32,6 +35,7 @@ fn noop_wrapped_arguments_are_preserved_exactly_not_created_or_stripped_by_norma
         );
     }
 }
+
 #[test]
 fn final_no_calls_requires_normal_stop_but_allows_empty_or_null_text_without_invented_tools() {
     for content in [json!("answer"), json!(""), Value::Null] {
@@ -57,6 +61,7 @@ fn final_no_calls_requires_normal_stop_but_allows_empty_or_null_text_without_inv
     bad["choices"][0]["finish_reason"] = json!("stop");
     assert!(normalize(&bad).is_err());
 }
+
 #[test]
 fn raw_duplicates_include_ignored_payloads_escaped_unicode_and_nested_arguments_before_map_ownership(
 ) {
@@ -81,6 +86,7 @@ fn raw_duplicates_include_ignored_payloads_escaped_unicode_and_nested_arguments_
     )
     .is_err());
 }
+
 #[test]
 fn complete_syntax_utf8_depth_byte_and_aggregate_entry_preflight_has_exact_boundaries() {
     for raw in [
@@ -116,6 +122,7 @@ fn complete_syntax_utf8_depth_byte_and_aggregate_entry_preflight_has_exact_bound
     let deep = "[".repeat(10000) + "0" + &"]".repeat(10000);
     assert!(json::parse(deep.as_bytes(), &DecodeLimits::default()).is_err());
 }
+
 #[test]
 fn canonical_reply_matches_independent_ciborium_with_native_correlation_unknown_usage_and_separate_reasoning(
 ) {
@@ -191,6 +198,7 @@ fn canonical_reply_matches_independent_ciborium_with_native_correlation_unknown_
         "patch_memory"
     );
 }
+
 #[test]
 fn full_width_counters_are_exact_and_scalar_array_or_nonmodel_integer_selection_stays_core_owned() {
     let mut response = completion("{}");
@@ -227,6 +235,7 @@ fn full_width_counters_are_exact_and_scalar_array_or_nonmodel_integer_selection_
         assert!(normalize(&response).is_err());
     }
 }
+
 #[test]
 fn complete_multi_call_metadata_is_preserved_without_selecting_first_and_bad_later_argument_cannot_be_salvaged(
 ) {
@@ -255,6 +264,7 @@ fn complete_multi_call_metadata_is_preserved_without_selecting_first_and_bad_lat
     value["choices"][0]["message"]["tool_calls"][1]["id"] = json!("call-1");
     assert!(normalize(&value).is_err());
 }
+
 #[test]
 fn terminal_schema_model_refusal_lengths_and_errors_fail_closed_without_raw_error_echo() {
     let good = completion("{}");
@@ -294,6 +304,7 @@ fn terminal_schema_model_refusal_lengths_and_errors_fail_closed_without_raw_erro
     body["choices"][0]["message"]["tool_calls"] = json!([]);
     assert_eq!(normalize(&body).err(), Some(NormalizeError::Incomplete));
 }
+
 #[test]
 fn textual_reply_has_no_control_and_final_frame_bounds_include_embedding_and_generated_usage() {
     let response = json!({"model":"m","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":""}}]});

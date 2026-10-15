@@ -1,27 +1,35 @@
 //! Single-threaded import-free Wasm buffer ownership; never dereferences caller pointers.
+
 use super::{abi, AbiError, Guest, MAX_FRAME_BYTES};
 use alloc::vec::Vec;
 use core::cell::UnsafeCell;
+
 #[global_allocator]
 
 static ALLOCATOR: dlmalloc::GlobalDlmalloc = dlmalloc::GlobalDlmalloc;
+
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo<'_>) -> ! {
     core::arch::wasm32::unreachable()
 }
+
 struct State {
     guest: Guest,
     input: Option<Vec<u8>>,
     output: Vec<u8>,
 }
+
 struct Global(UnsafeCell<State>);
+
 // Wasm MVP has no threads, imports or reentrant callbacks; exports run synchronously.
 unsafe impl Sync for Global {}
+
 static STATE: Global = Global(UnsafeCell::new(State {
     guest: Guest::new(),
     input: None,
     output: Vec::new(),
 }));
+
 #[no_mangle]
 pub extern "C" fn raiv_alloc(len: u32) -> u32 {
     // SAFETY: the module's single-threaded synchronous export boundary is exclusive.
@@ -38,6 +46,7 @@ pub extern "C" fn raiv_alloc(len: u32) -> u32 {
     state.input = Some(bytes);
     pointer
 }
+
 #[no_mangle]
 pub extern "C" fn raiv_dealloc(ptr: u32, len: u32) {
     // SAFETY: exclusive export access; only an exact live allocation can be freed.
@@ -50,6 +59,7 @@ pub extern "C" fn raiv_dealloc(ptr: u32, len: u32) {
         state.input = None;
     }
 }
+
 #[no_mangle]
 pub extern "C" fn raiv_step(ptr: u32, len: u32) -> u64 {
     // SAFETY: exclusive access. Foreign offsets are compared, never dereferenced.

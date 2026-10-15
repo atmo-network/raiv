@@ -12,6 +12,7 @@ use raiv::{
     format::{DaslCid, DaslCodec, DecodeLimits},
     limits::Limits,
 };
+
 fn caps() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -19,6 +20,7 @@ fn caps() -> ManifestLimits {
         max_admissions: 10,
     }
 }
+
 fn prepared(
     wasm: &[u8],
     registry: &Registry,
@@ -52,6 +54,7 @@ fn prepared(
         (token, sealed)
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn finish_yield_atomic_metadata_recovery_exact_retry_and_old_decision_do_not_reinfer_or_rollback() {
@@ -171,6 +174,7 @@ fn finish_yield_atomic_metadata_recovery_exact_retry_and_old_decision_do_not_rei
         raiv::state::Continuation::AwaitAction { .. }
     ));
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn unknown_publication_keeps_ram_and_handoff_old_then_exact_locked_retry_or_pinned_adoption_resolves(
@@ -243,6 +247,7 @@ fn unknown_publication_keeps_ram_and_handoff_old_then_exact_locked_retry_or_pinn
         1
     );
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn absence_conflict_raw_run_caps_and_corrupt_source_refuse_without_head_consumption_or_handoff_loss(

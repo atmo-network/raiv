@@ -12,6 +12,7 @@ use raiv::{
     format::{DaslCid, DaslCodec, DecodeLimits},
     limits::Limits,
 };
+
 fn caps() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -19,6 +20,7 @@ fn caps() -> ManifestLimits {
         max_admissions: 10,
     }
 }
+
 fn snapshot_pin(disk: &mut DiskBlockStore) -> LocalRecoveryPin {
     let bytes = disk.manifest(caps().wire).read().unwrap().unwrap();
     let data = CheckpointManifest::decode(&bytes, &caps()).unwrap();
@@ -29,6 +31,7 @@ fn snapshot_pin(disk: &mut DiskBlockStore) -> LocalRecoveryPin {
         resources: data.resources(),
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn reserved_restart_reissues_new_capability_for_same_exact_input_then_launches_and_commits_once() {
@@ -139,6 +142,7 @@ fn reserved_restart_reissues_new_capability_for_same_exact_input_then_launches_a
         1
     );
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn attempted_and_launched_restart_never_reissue_zero_attempt_capability_or_change_counts() {

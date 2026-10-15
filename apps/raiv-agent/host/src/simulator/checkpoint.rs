@@ -1,16 +1,20 @@
 //! Bounded executor checkpoint DATA, not approval, ticket recreation, persistence or effects.
+
 use super::*;
 use raiv::format::{validate_drisl, CodecError, DaslCid, DecodeLimits};
 use std::ops::Range;
+
 pub mod file;
 #[cfg(test)]
 mod tests;
 mod wire;
+
 #[derive(Clone, Copy, Debug)]
 pub struct ExecutorLimits {
     pub wire: DecodeLimits,
     pub max_actions: u64,
 }
+
 #[derive(Debug)]
 pub enum ExecutorCheckpointError {
     Codec(CodecError),
@@ -21,6 +25,7 @@ pub enum ExecutorCheckpointError {
     Limits(raiv::limits::LimitsError),
     Simulator(SimulatorError),
 }
+
 impl fmt::Display for ExecutorCheckpointError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -34,12 +39,15 @@ impl fmt::Display for ExecutorCheckpointError {
         })
     }
 }
+
 impl std::error::Error for ExecutorCheckpointError {}
+
 #[derive(Clone, Copy)]
 enum Change<'a> {
     Submitted(Id32),
     Terminal(Id32, &'a Receipt),
 }
+
 impl Change<'_> {
     fn action(self) -> Id32 {
         match self {
@@ -47,12 +55,14 @@ impl Change<'_> {
         }
     }
 }
+
 struct Stored {
     record: ExecutionRecord,
     limits: Limits,
     command: Range<usize>,
     receipt: Option<Range<usize>>,
 }
+
 /// Own one unchanged exact encoded frame only AFTER complete borrowed preflight.
 /// Records/spans are bounded metadata; no payload tree or native capabilities are stored.
 pub struct ExecutorCheckpoint {
@@ -61,10 +71,12 @@ pub struct ExecutorCheckpoint {
     program: ProgramBinding,
     rows: Vec<Stored>,
 }
+
 pub(super) struct ExecutorCheckpointView<'a> {
     bytes: &'a [u8],
     rows: Vec<Stored>,
 }
+
 impl ExecutorCheckpointView<'_> {
     pub(super) fn records(&self) -> impl Iterator<Item = (ExecutionRecord, Option<&[u8]>)> + '_ {
         self.rows.iter().map(|r| {
@@ -75,6 +87,7 @@ impl ExecutorCheckpointView<'_> {
         })
     }
 }
+
 impl ExecutorCheckpoint {
     pub(super) fn borrowed<'a>(
         bytes: &'a [u8],
@@ -83,6 +96,7 @@ impl ExecutorCheckpoint {
         let (_, _, rows) = wire::inspect(bytes, limits)?;
         Ok(ExecutorCheckpointView { bytes, rows })
     }
+
     pub fn capture(
         registered: &RegisteredAgent,
         admissions: &AdmissionBook,
@@ -91,6 +105,7 @@ impl ExecutorCheckpoint {
     ) -> Result<Self, ExecutorCheckpointError> {
         Self::capture_stage(registered, admissions, book, limits, None)
     }
+
     pub(super) fn capture_stage(
         registered: &RegisteredAgent,
         admissions: &AdmissionBook,
@@ -106,6 +121,7 @@ impl ExecutorCheckpoint {
             submitted.map(Change::Submitted),
         )
     }
+
     pub(super) fn capture_terminal(
         registered: &RegisteredAgent,
         admissions: &AdmissionBook,
@@ -122,6 +138,7 @@ impl ExecutorCheckpoint {
             Some(Change::Terminal(action, receipt)),
         )
     }
+
     fn capture_change(
         registered: &RegisteredAgent,
         admissions: &AdmissionBook,
@@ -180,6 +197,7 @@ impl ExecutorCheckpoint {
         let encoded = wire::encode_change(id, program, &rows, limits, change)?;
         Self::from_frame(encoded, limits)
     }
+
     pub(super) fn check_source(
         &self,
         registered: &RegisteredAgent,
@@ -204,6 +222,7 @@ impl ExecutorCheckpoint {
         }
         Ok(())
     }
+
     fn restore_bounds(
         saved: Limits,
         registered: &RegisteredAgent,
@@ -232,6 +251,7 @@ impl ExecutorCheckpoint {
             ..saved
         }
     }
+
     /// Shared sidecar/primary-world restoration: whole source/capacity and ALL borrowed
     /// caller-bound nested payload checks precede further Command/Receipt ownership.
     pub(super) fn preflight_restore(
@@ -257,6 +277,7 @@ impl ExecutorCheckpoint {
         }
         Ok(())
     }
+
     pub(super) fn stage_restore(
         &self,
         registered: &RegisteredAgent,
@@ -291,6 +312,7 @@ impl ExecutorCheckpoint {
         }
         Ok(staged)
     }
+
     fn check_entry(
         registered: &RegisteredAgent,
         admissions: &AdmissionBook,
@@ -338,6 +360,7 @@ impl ExecutorCheckpoint {
         }
         Ok(())
     }
+
     fn from_frame(
         encoded: Vec<u8>,
         limits: &ExecutorLimits,
@@ -350,6 +373,7 @@ impl ExecutorCheckpoint {
             rows,
         })
     }
+
     pub fn decode(bytes: &[u8], limits: &ExecutorLimits) -> Result<Self, ExecutorCheckpointError> {
         let (agent, program, rows) = wire::inspect(bytes, limits)?;
         let mut encoded = Vec::new();
@@ -364,6 +388,7 @@ impl ExecutorCheckpoint {
             rows,
         })
     }
+
     #[cfg(test)]
     pub(super) fn test_frame(
         agent: Id32,
@@ -378,29 +403,37 @@ impl ExecutorCheckpoint {
         )
         .unwrap()
     }
+
     pub fn as_bytes(&self) -> &[u8] {
         &self.encoded
     }
+
     pub fn agent_id(&self) -> Id32 {
         self.agent
     }
+
     pub fn program_binding(&self) -> ProgramBinding {
         self.program
     }
+
     pub fn records(&self) -> impl Iterator<Item = ExecutionRecord> + '_ {
         self.rows.iter().map(|r| r.record)
     }
+
     pub fn command_bytes(&self, action: Id32) -> Option<&[u8]> {
         self.row(action).map(|r| &self.encoded[r.command.clone()])
     }
+
     pub fn receipt_bytes(&self, action: Id32) -> Option<&[u8]> {
         self.row(action)
             .and_then(|r| r.receipt.as_ref())
             .map(|r| &self.encoded[r.clone()])
     }
+
     pub fn recorded_limits(&self, action: Id32) -> Option<Limits> {
         self.row(action).map(|r| r.limits)
     }
+
     fn row(&self, action: Id32) -> Option<&Stored> {
         self.rows
             .binary_search_by_key(&action, |r| r.record.action_id)

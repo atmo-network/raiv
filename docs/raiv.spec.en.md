@@ -1,7 +1,8 @@
-# Raiv 0.0.1
+# Raiv 0.0.2
+
 ## Specification of the portable Rust library and isolated WebAssembly reference agent
 
-**Date:** 12 October 2026. **Revision:** 0.0.1 — isolated WASM reference application. **Status:** implementation specification, not an implementation report.
+**Date:** 15 October 2026. **Revision:** 0.0.2 — provider profiles, readable Memory and pinned local sessions on the isolated WASM reference application; 0.0.1 (12 October 2026) was the first release. **Status:** normative implementation specification, not an implementation report; progress and evidence live in the changelog and backlog.
 **Pronunciation:** /reɪv/, like *rave*.
 **Components:** `raiv` — portable library; `raiv-agent` — native host + isolated guest; `raiv-agent.wasm` — compiled agent logic.
 **State format:** `raiv-state/1`, DASL CID + DRISL; CAR is host-side transport.
@@ -10,11 +11,11 @@
 
 **MUST / MUST NOT** denote requirements; **SHOULD** denotes a recommendation whose deviation must be documented; **MAY** denotes an option. Requirement owners: **core** (library), **host** (accepting environment), **adapter** (an integration module), **reference application** (`raiv-agent`, with guest and native host responsibilities stated separately).
 
-This is a self-contained specification for the first Raiv version. It does not publish a crate, reserve a name, implement a JAM service, or perform real financial operations.
+This is a self-contained specification for the first Raiv version. It does not implement a JAM service or perform real financial operations. The `raiv` crate and reference application implement it; this document neither reports their progress nor treats a passing build as conformance.
 
 ## Contents
 
-1. Decisions in revision 0.0.1
+1. Decisions in revision 0.0.2
 2. Trust and guarantee model
 3. Deliverables and scope
 4. Terminology and invariants
@@ -39,7 +40,7 @@ This is a self-contained specification for the first Raiv version. It does not p
 23. Final contract
 24. Sources and verification status
 
-## 1. Decisions in revision 0.0.1
+## 1. Decisions in revision 0.0.2
 
 Raiv separates three boundaries: execution trust, on-chain anchoring, and off-chain availability.
 
@@ -56,11 +57,13 @@ Raiv separates three boundaries: execution trust, on-chain anchoring, and off-ch
 | Persistent memory | Optional sparse `intents` / `strategy` / `tactics` object; one agent memory |
 | History | Commands, outcomes, and states grouped up to `Finish` |
 | Excluded | Persistent transcript, `response`, `lazy`, reasoning archive, task scheduler |
-| Inference | Native OpenAI-compatible Chat Completions adapter; complete normalized replies enter the guest through a versioned CBOR ABI |
+| Inference | Native OpenAI-compatible Chat Completions adapter with closed provider profiles (§18.3); complete normalized replies enter the guest through a versioned CBOR ABI |
+| Presentation | Hosts may render accepted model values as compact JSON for people; presentation never becomes state, context or authority (§8.4) |
+| Local sessions | A reference session pins its guest, configuration and grant plan; newer builds never rebind it (§18.6) |
 | Portability | Required `no_std + alloc` for core/runtime dependencies; adapters remain outside core |
 | Availability | A contract for the entire required graph, including retention, recovery, and failures |
 
-The document version is 0.0.1. The first state format is `raiv-state/1`. The sparse `intents` / `strategy` / `tactics` contract below defines the first memory standard, not a migration or a second Memory version. Structural record versions remain 1. Implementations MUST NOT rename stored keys, reinterpret incompatible blocks, or rewrite existing CIDs or Command bindings to make data pass validation. Changing format strings and hash domains changes content, IDs, and roots.
+The document version is 0.0.2. Relative to 0.0.1 it adds provider profiles, value presentation, actionable patch feedback, failure categories and local-session pinning; it changes no state format, structural record, hash domain or golden fixture, so 0.0.1 checkpoints remain valid 0.0.2 checkpoints. The first state format is `raiv-state/1`. The sparse `intents` / `strategy` / `tactics` contract below defines the first memory standard, not a migration or a second Memory version. Structural record versions remain 1. Implementations MUST NOT rename stored keys, reinterpret incompatible blocks, or rewrite existing CIDs or Command bindings to make data pass validation. Changing format strings and hash domains changes content, IDs, and roots.
 
 ## 2. Trust and guarantee model
 
@@ -101,25 +104,19 @@ The blockchain anchors accepted content and transition order without necessarily
 
 **Out of scope:** an IPFS/P2P node or blockchain consensus; a wallet/keys in core; mainnet actions; DAG schedulers, subagents, multi-scope memory, CRDT/fork/merge; shell/browser/filesystem tools; online learning; MASL/RASL/FISL; arbitrary hash/codec registries; automatic migration; a complete JAM adapter. Pi Durable's entire feature set need not be ported: inspiration is limited to preserving continuation before an external effect.
 
-Conceptual workspace structure; this is not a requirement to create files during a specification revision:
+Workspace structure (informative; module names may evolve without changing requirements):
 
 ```text
 raiv/
   Cargo.toml                   # Workspace; default member: lib
-  lib/
-    Cargo.toml                 # raiv library package
-    src/                       # Raiv Core
+  run.sh                       # Linux interactive launcher for local sessions (§18.6)
+  lib/                         # raiv library package: Core, no_std + alloc
   apps/raiv-agent/
-    host/                      # Native Rust, std
-      src/
-        main.rs  config.rs  tui.rs  runtime.rs  inference.rs
-        storage/{memory,disk,ipfs}.rs  transport/car.rs
-        executor/simulator.rs  actor/simulator.rs
-    guest/                     # Rust, wasm32v1-none, no_std + alloc
-      src/lib.rs  src/abi.rs
-  profiles/{veto,survivor}/
-  fixtures/{format,lifecycle,failures}/
-  raiv-agent.toml
+    guest/src/                 # Rust, wasm32v1-none, no_std + alloc: ABI, runtime, profiles
+    host/src/                  # Native Rust, std: configuration, inference, terminal, disk store,
+                               # checkpoint manifest, admission, registry, recovery, simulator
+    raiv-agent.*.toml          # Example configurations and grant plans
+  fixtures/                    # Conformance vectors, generators and upstream DASL cases
   docs/raiv.spec.en.md
 ```
 
@@ -239,7 +236,7 @@ The arguments to `patch_memory` are the object patch itself, without an `operati
 
 The argument root MUST be an object, including an allowed empty `{}`. Supported plane names are exactly `intents`, `strategy`, and `tactics`; an applicable plane patch value MUST be an object or null. A well-formed bounded request is handled optimistically at **top-level root selection**: unknown/alias plane names are skipped with explicit reasons, rather than invalidating patches under supported roots. This tolerance concerns membership in the supported schema, not whether a supported plane is currently present in Memory, and does not weaken validation of content under selected roots. Unsupported names MUST NOT be materialized or interpreted as aliases. A supported plane absent from current enabled Memory is not unsupported: an object patch may create it, and null deletion remains a successful no-effect operation. Non-object roots, invalid object/null shape or invalid patch content under a supported root, duplicate keys, forbidden model-data encodings, and complete-input resource-limit failures reject the request without mutation. Provider JSON parsing MUST detect duplicate keys before normalization into canonical CBOR; reducing them to last-write-wins is forbidden.
 
-The advertised root schema has `type: "object"`, `additionalProperties: false`, optional properties `intents`, `strategy`, and `tactics`, each accepting object or null, and no required planes. This describes the intended vocabulary, not permission for a generic schema validator to reject an entire bounded request before optimistic plane selection. The runtime validator additionally enforces recursive merge, array-data restrictions, normalization, bounds, and explicit skipped-plane feedback. Tool descriptions, system instructions, and scripted examples MUST distinguish supported input from tolerant handling of recoverable plane errors.
+The advertised root schema has `type: "object"`, `additionalProperties: false`, optional properties `intents`, `strategy`, and `tactics`, each accepting object or null, and no required planes. This describes the intended vocabulary, not permission for a generic schema validator to reject an entire bounded request before optimistic plane selection. New provider-facing Definitions SHOULD express each plane's object-or-null as `anyOf: [{type: "object"}, {type: "null"}]` rather than a `type` array, because some models serialize a `type`-array plane as text containing JSON; Definitions created earlier keep their exact schema bytes, since changing them changes the Definition. The runtime validator additionally enforces recursive merge, array-data restrictions, normalization, bounds, and explicit skipped-plane feedback. Tool descriptions, system instructions, and scripted examples MUST distinguish supported input from tolerant handling of recoverable plane errors.
 
 For each field of an object patch:
 
@@ -282,7 +279,7 @@ Representative merge cases (each starts from the specified working memory):
 
 Preflight the complete input's representation, duplicate keys, model-data validity, and byte/depth/entry limits. Select supported top-level roots and skip unsupported names with bounded reasons. Validate patch semantics under all selected roots, then compute their draft without mutating working memory. An unsupported-root warning is feedback, not failure of the selected set; invalid content within that set remains an error. Normalize globally and validate the final no-null/schema invariants, actual embedded depth, encoded Memory size, full returned result including feedback, and combined trajectory/context bounds. Only after all final checks succeed may Core replace working memory. A global validation/allocation/output/context failure leaves its bytes, CID, and live assignment unchanged; it MUST NOT silently choose an arbitrary subset merely to fit a limit. This safe publication protects state integrity, not a database-style requirement that every requested semantic plane be applicable.
 
-A patch result MUST expose the complete compact accepted Memory, identify processed and skipped planes with reasons, and distinguish actual change from accepted no-effect work. Processed does not imply changed. Feedback MUST make clear which useful work survived and what, if anything, needs correction; a partial or all-skipped result MUST NOT force a corrective retry, implicit Finish, or replay of already useful work. The agent may continue with another decision. Feedback is bounded transient tool-result/trajectory data, not a new Memory plane, structural record, persistent journal, or authority.
+A patch result MUST expose the complete compact accepted Memory, identify processed and skipped planes with reasons, and distinguish actual change from accepted no-effect work. Processed does not imply changed. Feedback MUST make clear which useful work survived and what, if anything, needs correction; a partial or all-skipped result MUST NOT force a corrective retry, implicit Finish, or replay of already useful work. The agent may continue with another decision. Feedback is bounded transient tool-result/trajectory data, not a new Memory plane, structural record, persistent journal, or authority. A rejected patch's error text MUST name the violated rule and the expected shape (for example, that a plane is an object of named entries rather than text containing JSON), stay within the ABI error-code bound, and keep a stable `invalid_patch` prefix. It MUST NOT repair, parse or reinterpret the rejected value.
 
 The input, traversal metadata, intermediate draft, and output MUST all be bounded, using fallible allocation and checked arithmetic. `max_patch_entries` counts every map field and array element in the complete argument recursively, including plane fields and entries in replacement arrays; it does not count an operation list. Existing model-reply, depth, collection, Memory, block, and context caps also apply. A tiny final result never justifies an unbounded input or intermediate allocation. Model integers retain their restricted exact range; bytes, links, floats, and unauthorized values do not become editable memory data.
 
@@ -345,6 +342,10 @@ Decoding MUST preserve duplicate-key errors and enforce byte/depth/entry limits 
 Structural blocks are limited to the six kinds in §9. Core creates Links; a generic IPLD value/codec registry is not public API. Protocol IDs and evidence references are scalar bytes/text, not implicit dependencies on external proof archives.
 
 The root has no `previous_root` link; an Episode never links to earlier versions of its own manifest. The required closure contains the definition, current memory, open episode, and bounded completed history. Decoding rejects cycles/repeated semantic positions and wrong types; an identical immutable block under one CID is loaded once.
+
+### 8.4. Presentation of model values
+
+A host, tool or developer surface MAY render a validated model value as **compact JSON**: canonical key order, no insignificant whitespace, decimal integers, `true`/`false`/`null`, and RFC 8259 string escaping (control characters escaped, other Unicode verbatim). Rendering MUST NOT recurse without bound over model-controlled depth. The rendering is presentation only: it is never parsed back into state, hashed, compared for identity, sent to the guest as a substitute for canonical bytes, or treated as authority. Canonical DRISL bytes and their CIDs remain the only identity. Accepted Memory rendered this way is the agent's current semantic state, not a transcript.
 
 ## 9. State data
 
@@ -418,7 +419,7 @@ AgentState {
 
 `ToolDescriptor` contains `id`, `version`, `control`, `description`, `arguments_schema`, and `authority_binding`. Every field is required; the schema is a bounded Map, and authority_binding is Id32 or null for local tools. Control is `continue`, `yield`, or `finish`. Names are unique and their order fixed; runtime planners match descriptors and the authorized code version. Core need not implement all of JSON Schema: the trusted application validator and advertised descriptor must agree.
 
-Definition contains no secret-bearing URLs, headers, or keys. A changed mandate, tool semantics, or logical model selection requires an administrative new Definition, not a memory patch. Version 0.0.1 does not support live upgrades during an episode. Limits are enumerated in §17; deployment cannot silently change them after genesis.
+Definition contains no secret-bearing URLs, headers, or keys. A changed mandate, tool semantics, or logical model selection requires an administrative new Definition, not a memory patch. This revision does not support live upgrades during an episode. Limits are enumerated in §17; deployment cannot silently change them after genesis.
 
 ### 9.2. Consistency checks
 
@@ -695,7 +696,7 @@ The reference ABI uses one complete CBOR envelope `{abi_version: 1, type: Text, 
 | Guest → `initialized` | `{root: bytes, blocks: list<Block>}`; genesis data, not registration or dispatch permission |
 | Guest → `infer` | `{request_id: u64, request: ModelRequest}`; yield for native inference while retaining RAM |
 | Guest → `boundary` | `{candidate: CommitCandidate}`; seal activation; host applies placement/readiness/acceptance before effects |
-| Guest → `error` | `{code: Text}`; explicit ABI/validation/run failure, never an implicit checkpoint |
+| Guest → `error` | `{code: Text}`; explicit ABI/validation/run failure, never an implicit checkpoint. A failed activation SHOULD report its §17 category where known: `corrective_turns_exhausted`, `budget_exhausted` or `context_limit`, else `activation_failed` |
 
 In the CBOR transport, `ModelRequest` is a closed map `{projection_version: u64, context: bytes, model_parameters: map, tools: list<ToolDescriptor>, limits: Limits}`. `context` holds the complete exact canonical model-compatible CBOR projection, not a state block or an additional message; `tools` contains only the enabled descriptors in Definition order. The outer `request_id` binds this request; it is not duplicated inside the map. Embedded model parameters, descriptors and Limits retain their owner schemas and bounds. `CommitCandidate` uses the eight fields shown in the Core contract, with fixed binary CIDs, `new_blocks: list<Block>` in binary-CID order and closed disposition `{tag: "await_actor"}` or `{tag: "await_action", action_id: Id32}`. This is the exact source-relative delta; placement and required-closure validation use it together with the source blocks, not a fabricated extra root/state kind.
 
@@ -768,67 +769,72 @@ ScriptedInference is mandatory first and exercises the same CBOR step interface 
 
 Only complete, validated normalized ModelReply data enters the guest. Streaming MAY progressively display text, but a failed, truncated, malformed, or interrupted stream MUST produce an inference failure, never a successful partial reply or checkpoint. Context/reply bytes, model-call counts, tool-call cardinality, and execution budgets in §§7/17 still apply; host HTTP/SSE limits apply before parsing. No stream chunk advances guest state.
 
-Provider extensions are explicit adapter choices bound to the authorized Definition's inference profile, not inferred from endpoint/model strings by the generic interface. The initial DeepSeek adapter sends `thinking: {type: "disabled"}` as a provider-specific extension, not a general inference field. If thinking mode is added, required continuation fields remain in the live activation's RAM only; DeepSeek requires passing reasoning_content back in subsequent tool-enabled requests. A durable boundary starts a new context without previous reasoning. [S10]
+Provider extensions are explicit adapter choices bound to the authorized Definition's inference profile, not inferred from endpoint/model strings by the generic interface. The live inference profile is a closed model Map with `provider`, `protocol: "openai-chat-completions"`, `base_url`, `model` and `thinking: bool`, plus `reasoning_effort` exactly when `thinking` is true. It names one provider family:
 
-The host MUST obtain the API key exclusively from the environment variable named by `api_key_env`; missing variables and unsupported protocols are explicit configuration errors before live inference. API keys MUST NOT enter WASM memory, model context, Definition, Command, Receipt, checkpoints, CAR, or ordinary application logs. Browser/OAuth/subscription authentication is outside v0.0.1. Endpoint changes must respect the authorized inference-source policy; a model/mandate/permission change requiring a Definition update cannot silently mutate an existing agent's authority.
+| Provider | Request extensions | Reasoning |
+| --- | --- | --- |
+| `opencode-go` | `thinking: {type: "disabled"}`, or `{type: "enabled"}` plus `reasoning_effort` for the pinned reasoning model | Enabled mode retains provider `reasoning_content` in live-activation RAM and passes it back on later tool-enabled requests, as DeepSeek requires [S10]; disabled mode rejects nonempty reasoning |
+| `openai-compatible` | None; `thinking` is always false and `reasoning_effort` is absent | Provider reasoning text is transient adapter data: never replayed, stored, shown to the guest or treated as a reply |
+
+A durable boundary always starts a new context without previous reasoning. Both families send the standard body (`model`, `messages`, `max_tokens`, `stream`, `n: 1`, tools with `tool_choice: "auto"` and `parallel_tool_calls: false` when tools are enabled, and `stream_options.include_usage` when streaming).
+
+Provider responses are normalized strictly but interoperably. The reported model MUST equal the configured model, or be its dated snapshot `<model>-YYYY-MM-DD`; no other prefix, alias or case variant matches. In a streamed tool call, the first fragment for an index carries a nonempty `id`, `type: "function"` and the name; continuation fragments MAY repeat `type` and an empty `id`, while a nonempty different `id` is a framing error. Unknown delta members are ignored after bounded parsing; refusals, legacy `function_call`, conflicting terminal data, duplicate keys and malformed fragments still fail the reply.
+
+The host MUST obtain the API key exclusively from the environment variable named by `api_key_env`; missing variables and unsupported protocols are explicit configuration errors before live inference. The `opencode-go` family fixes the name `OPENCODE_API_KEY`; `openai-compatible` accepts any valid variable name (`[A-Za-z_][A-Za-z0-9_]*`). Provider-routing headers required by a specific endpoint carry no credential and are not Definition data. API keys MUST NOT enter WASM memory, model context, Definition, Command, Receipt, checkpoints, CAR, or ordinary application logs. Browser/OAuth/subscription authentication is outside this revision. Endpoint changes must respect the authorized inference-source policy; a model/mandate/permission change requiring a Definition update cannot silently mutate an existing agent's authority.
 
 ### 18.4. Example configuration
 
-`raiv-agent.toml` is the target application configuration, not a released binary's schema. Compact deployment fields expand into the full Definition/Limits at initialization; subsequent mismatches are checked rather than silently applied. Renamed example labels/domains apply to new registrations only; application renaming MUST NOT rewrite an existing execution_domain, identity, or Definition binding.
+`raiv-agent.toml` configures one local agent. Compact fields expand into the full Definition at initialization; afterwards the configuration is pinned by digest and mismatches are refused rather than applied (§18.6). Renamed example labels/domains apply to new registrations only; application renaming MUST NOT rewrite an existing execution_domain, identity, or Definition binding.
 
 ```toml
 schema_version = 1
 state_format = "raiv-state/1"
 
 [agent]
-profile = "survivor"
-label = "raiv-survivor-agent-01"
-mandate_file = "profiles/survivor/mandate.txt"
+profile = "survivor"                  # or "veto": memory disabled
+id = "<64 lowercase hex>"
+mandate = "Assist the local operator. Save lasting facts with patch_memory before answering."
 
 [execution]
 adapter = "local-trusted"
-domain = "raiv-agent/local-1"
+
+[runtime]
+guest_module = "guest.wasm"
+module_digest = "<SHA-256 of guest.wasm, 64 lowercase hex>"
 
 [inference]
-protocol = "openai-responses"
-base_url = "https://api.deepseek.com"
-model = "deepseek-chat"
-api_key_env = "DEEPSEEK_API_KEY"
+protocol = "openai-chat-completions"
+provider = "openai-compatible"        # omit for the opencode-go profile
+base_url = "https://opencode.ai/zen/go/v1"
+model = "qwen3.8-flash"
+api_key_env = "OPENCODE_API_KEY"      # a variable NAME, never the key
 stream = true
+max_tokens = 4096
+max_request_bytes = 262144
+max_response_bytes = 1048576
+max_header_bytes = 16384
+timeout_ms = 60000
+max_stream_event_bytes = 65536
+max_stream_events = 4096
 
 [storage]
 adapter = "disk"
-directory = "./var/blocks"
-
-[availability]
-policy = "local-crash-durable"
+directory = "blocks"
 
 [acceptance]
 adapter = "local"
-manifest = "./var/host.drisl"
 
-[executor]
-adapter = "simulator"
-ledger = "./var/world.drisl"
-scenario = "scenarios/retry-and-sleep.toml"
-
-[actor]
-adapter = "simulator"
-initial_wake_after_ticks = 1
-
-[memory]
-profile = "intents-strategy-tactics/1"
-max_bytes = 4096
-history_episodes = 2
-
-[limits]
-max_model_calls_per_activation = 16
-max_model_calls_per_episode = 64
-max_actions_per_episode = 8
-max_materialized_bytes = 4194304
+[executor]                            # optional synthetic world
+adapter = "scripted-unit-world"
+directory = "world"
+world_id = "<64 lowercase hex>"
+virtual_units = "10"
+capacity = 16
 ```
 
-`protocol` selects the host API adapter. In this revision, the required example selector `openai-responses` is a compatibility alias for `openai-chat-completions`; both select Chat Completions, NOT the separate OpenAI Responses API or `/responses` resource. `scripted` selects offline fixtures and performs no credential lookup. Unknown selectors fail configuration validation.
+Every section and key shown is required except `provider`, `reasoning_effort` (`opencode-go` only) and `[executor]`; unknown or duplicate keys and credential values are rejected. Paths resolve relative to the configuration file. Offline configurations use `protocol = "scripted"` with `model = "fixture-model"` and no live keys. Limits are the Definition's §17 values rather than configuration fields. Draft fields such as `label`, `mandate_file`, `domain`, `[availability]`, `[actor]`, `[memory]` and `[limits]` are not part of schema version 1.
+
+`protocol` selects the host API adapter. In this revision, the selector `openai-responses` is a compatibility alias for `openai-chat-completions`; both select Chat Completions, NOT the separate OpenAI Responses API or `/responses` resource. `scripted` selects offline fixtures and performs no credential lookup. Unknown selectors fail configuration validation.
 
 `base_url` is an HTTPS provider base URL without embedded credentials, query, or fragment. Strip trailing slashes, retain any configured version prefix (for example `/v1`), and append `/chat/completions` exactly once; if already present, use that resource unchanged. `model` is the exact provider identifier and MUST agree with the authorized Definition's inference profile. `api_key_env` is a variable NAME, never a secret value. `stream` controls provider streaming and host presentation, not guest admission or checkpoint boundaries. Headless `--inference scripted` explicitly selects offline fixtures instead of the live adapter.
 
@@ -840,23 +846,35 @@ The native interactive frontend MUST use Ratatui with Crossterm and exactly two 
 
 The displayed history is ephemeral host-side presentation state, separate from the guest's bounded activation trajectory. It MUST NOT be checkpointed or archived merely to support scrolling; restored agent continuity on restart does not restore previous visual history. Optional streamed text is provisional presentation only (§18.3); it neither mutates guest RAM nor changes committed guest state.
 
+History entries carry a visible role (operator, agent, Memory, status, error) that model text cannot imitate: continuation lines of a model reply never occupy the role position. On start the frontend MAY show the restored checkpoint and the accepted Memory (§8.4); after each accepted boundary it MAY add one line naming the revision, abbreviated root, model calls and remaining approved prompts, and, when Memory changed, the added, changed and removed entries. These are bounded history entries, not a permanent status panel, and they never restore conversation text. Messages that close the prompt state the reason and the operator's next step without implying acceptance, retry or replay.
+
 A terminal prompt becomes an ActorWake only if the host's registered Actor/admission policy authorizes that terminal principal. The host assigns an event ID and pins the observation/snapshot/budget, then applies the same authority, phase, bounds, and consumption checks as any other event. User text is bounded observation data, not a mandate, system instruction, permission grant, or Receipt. AwaitAction remains busy; prompts may be queued/coalesced outside core, never used to bypass the pending action or start a parallel episode. Unsupported prompts are rejected, not granted unrestricted authority.
 
+Every command that admits, adopts or executes takes explicitly selected pins rather than discovering a current head:
+
 ```text
-raiv-agent chat --config raiv-agent.toml
-raiv-agent init --config raiv-agent.toml
-raiv-agent status --config raiv-agent.toml
-raiv-agent wake --event <file> --config raiv-agent.toml
-raiv-agent execute-pending --config raiv-agent.toml
-raiv-agent resume --receipt <file> --config raiv-agent.toml
-raiv-agent export --root <cid> --out agent.car --config raiv-agent.toml
-raiv-agent verify --car agent.car --expected-root <cid>
-raiv-agent import --car agent.car --expected-root <cid> --config raiv-agent.toml
-raiv-agent run-scenario retry-and-sleep --inference scripted
-raiv-agent run-scenario provider-loss --inference scripted
+raiv-agent init | status | world-status --config <file>
+raiv-agent init-world --pin <main.toml> --config <file>
+raiv-agent interactive --grants <plan.toml> --pin <main.toml> --world-pin <hex> --config <file>
+raiv-agent wake --event <input.cbor> --grant <grant.cbor> [--replies <script.cbor>] --pin <main.toml> --world-pin <hex> --config <file>
+raiv-agent execute-pending --plan <plan.toml> --pin <main.toml> --world-pin <hex> --config <file>
+raiv-agent resume --receipt <input.cbor> --grant <grant.cbor> [--replies <script.cbor>] --pin <main.toml> --world-pin <hex> --config <file>
+raiv-agent run-scenario retry-and-sleep --inference scripted --config <file>
 ```
 
-Ratatui is the interactive frontend, not a replacement for noninteractive initialization, tests, verification, CAR operations, or scripted scenarios. Headless event/receipt files may use JSON for convenience, but admission produces exact canonical records. Import validates/places bytes and does not replace the anchor without a separate authorized decision. Headless status invokes no inference and reports root, revision, episode, phase, pending action, budget, storage readiness, and latest diagnostics; it does not add a TUI status region.
+The availability milestone adds `export --root <cid> --out <car>`, `verify --car <car> --expected-root <cid>`, `import --car <car> --expected-root <cid>` and `run-scenario provider-loss`. `--replies` selects scripted inference; without it, live inference uses the configured provider.
+
+Ratatui is the interactive frontend, not a replacement for noninteractive initialization, tests, verification, CAR operations, or scripted scenarios. Headless event/receipt files are exact canonical records. Import validates/places bytes and does not replace the anchor without a separate authorized decision. Headless status invokes no inference and reports root, revision, episode, phase, pending action, budget, storage readiness, admission states and the accepted Memory as a single-line compact JSON `memory=` field (§8.4); it does not add a TUI status region.
+
+### 18.6. Local sessions
+
+A reference **local session** is one directory holding exactly one agent: its configuration and configuration digest, the pinned guest module, the finite grant plan, the block store and the synthetic world. A launcher creates a session only in an absent directory, initializes only an empty revision-zero namespace, and never infers a new session from an incomplete one.
+
+A session is pinned. Reopening MUST run the session's own guest module, configuration and grant plan. A newer build, changed launcher default or toolchain update MUST NOT rebind, widen, migrate or orphan an existing session; the launcher MAY report that the current build differs. Using another provider, model, mandate or module requires a new session with a new Definition and registration, not a rewrite of the old one. A configuration whose digest no longer matches is refused.
+
+Each launch shows the exact session, configuration and guest digests, accepted root and revision, world and finite plan, and requires explicit operator approval. Within that approval each submitted prompt is a separately admitted ActorWake, bounded by the plan's prompt count and per-prompt model-call, unit and action grants. A launch that ends with an unresolved admission (for example a failed activation after launch) leaves the session refusing further prompts until the admission is explicitly resolved; the launcher never retries, refunds or replays automatically.
+
+The reference host derives a session's Definition from its compiled guest profiles. A guest change that alters an existing Definition's bytes therefore requires new sessions until the host reads the pinned Definition from the session closure; such a change MUST be additive, as new profiles are.
 
 ## 19. Acceptance scenarios
 
@@ -881,11 +899,11 @@ The mock acceptance layer stores only revision/profile/root digest plus registry
 
 ### 19.4. Live model
 
-Run the same virtual-world scenarios through DeepSeek as a separate smoke test. Do not require the scripted model's exact decisions or profitable behavior. Require whitelist enforcement, correct phases, bounded execution, and restoration. Missing API access is skipped, not passed. IPFS smoke is also separate; local CAR roundtrip does not prove external-network operation.
+Run the same virtual-world scenarios through live providers as a separate smoke test: DeepSeek through `opencode-go`, and at least one model of another family through `openai-compatible`. Do not require the scripted model's exact decisions or profitable behavior. Require whitelist enforcement, correct phases, bounded execution, and restoration. Missing API access is skipped, not passed. IPFS smoke is also separate; local CAR roundtrip does not prove external-network operation.
 
 ## 20. Mandatory test matrix
 
-There are 91 testable requirements. This is an acceptance plan, not a claim of passing Rust tests. C/L/H cover codec, lifecycle, and host behavior; T and D cover trust, anchoring, and availability; W covers the WASM reference interface; M covers sparse semantic Memory and object-patch behavior.
+There are 96 testable requirements. This is an acceptance plan, not a claim of passing Rust tests. C/L/H cover codec, lifecycle, and host behavior; T and D cover trust, anchoring, and availability; W covers the WASM reference interface; M covers sparse semantic Memory and object-patch behavior.
 
 ### 20.1. Codec and graph
 
@@ -909,6 +927,7 @@ There are 91 testable requirements. This is an acceptance plan, not a claim of p
 | C16 | A CAR header cannot substitute the expected root or closure |
 | C17 | Frame order does not affect the root; unsupported formats are rejected |
 | C18 | Another codec implementation yields identical bytes; not just self-roundtrip |
+| C19 | Compact JSON presentation of model values parses with an independent JSON parser to the same value, keeps canonical key order, escapes controls, and never feeds back into state |
 
 ### 20.2. Lifecycle
 
@@ -991,6 +1010,9 @@ There are 91 testable requirements. This is an acceptance plan, not a claim of p
 | W09 | Protocol aliases, endpoint/path resolution, exact model/Definition agreement and unsupported-configuration errors are tested |
 | W10 | Live credentials come exclusively from api_key_env; missing variables fail and secrets never reach guest memory/context/state/CAR/logs |
 | W11 | Offline scripted scenarios, prompt authority/phase rejection and TUI tests use the same guest ABI with no network or API key |
+| W12 | Provider families send only their own extensions; dated model snapshots match while other names fail; empty-id stream continuations are accepted and different ids rejected; generic reasoning is never replayed |
+| W13 | Local sessions reopen with their own pinned guest, configuration and plan; newer builds or defaults never rebind or widen them; changed configuration and unresolved admissions refuse |
+| W14 | Restored Memory and per-boundary Memory changes are shown as role-labelled presentation; status prints compact `memory=` JSON; no conversation text is restored |
 
 ### 20.7. Sparse memory and object patches
 
@@ -1012,10 +1034,11 @@ There are 91 testable requirements. This is an acceptance plan, not a claim of p
 | M14 | Enabled empty memory is a linked Memory with value {}; disabled memory has null links and no patch capability or fabricated planes |
 | M15 | Patches retain the live Activation, immutable prefix and RAM trajectory; only existing boundaries store materialized Memory, with no durable patch log |
 | M16 | Finish preserves surviving memory into the next Episode; deleting tactics neither cancels accepted Commands nor substitutes for AwaitAction/Receipt continuation |
+| M17 | Rejected patches return bounded `invalid_patch` feedback naming the violated rule and expected shape, without repairing or reinterpreting the value |
 
 ## 21. Implementation validation and compatibility boundaries
 
-Native unit/property tests, fuzzing of decoder/patch/tool replies/graphs and ABI frames, and no_std builds without hidden std features are mandatory. CI MUST compile the Rust guest for `wasm32v1-none` and run it under Wasmi 2.x without WASI, including native/WASM transition and checkpoint equality for identical admitted inputs/replies. Library MSRV and existing `wasm32-unknown-unknown`/bare-metal gates remain. A WASM smoke test does not prove JAM/PVM readiness.
+Native unit/property tests, fuzzing of decoder/patch/tool replies/graphs and ABI frames, and no_std builds without hidden std features are mandatory. Seeded mutation of golden vectors inside the ordinary suite is a useful reproducible baseline; it does not replace coverage-guided fuzzing of ABI frames and graphs. CI MUST compile the Rust guest for `wasm32v1-none` and run it under Wasmi 2.x without WASI, including native/WASM transition and checkpoint equality for identical admitted inputs/replies. Library MSRV and existing `wasm32-unknown-unknown`/bare-metal gates remain. A WASM smoke test does not prove JAM/PVM readiness.
 
 Pin the DASL conformance suite by revision. It includes multiple, sometimes conflicting CBOR profiles; use relevant cases and stricter Raiv negative tests rather than requiring every unrelated row to pass. [S13] Self encode/decode roundtrips are insufficient; independent canonical bytes and CID vectors are required.
 
@@ -1029,14 +1052,14 @@ Measure RAM high-water marks, dependency graph/binary size, and restore/encode t
 
 | Milestone | Deliverable | Gate |
 | --- | --- | --- |
-| 1. Format contract | Six typed blocks, checked DaslCid, ID derivation, strict codec, genesis, exact fixtures | C01–C09, C11–C15, C18; no_std spike |
-| 2. RAM core | Projection, sparse object-patch memory, single-tool loop, yield/Finish, limits, scripted inference | L01–L15, M01–M16; no I/O inside the loop |
+| 1. Format contract | Six typed blocks, checked DaslCid, ID derivation, strict codec, genesis, exact fixtures, value presentation | C01–C09, C11–C15, C18–C19; no_std spike |
+| 2. RAM core | Projection, sparse object-patch memory, single-tool loop, yield/Finish, limits, scripted inference | L01–L15, M01–M17; no I/O inside the loop |
 | 3. WASM guest and step bridge | Rust guest, Wasmi 2.x, bounded CBOR ABI, scripted replies, live activation | W01–W05; scripted native/WASM equality, no WASI |
 | 4. Local trusted host | Registry/anchor, admission, atomic acceptance, simulator ledger, Actor, fresh-instance recovery | H01–H15, T01–T08, W06; crash scenario |
 | 5. Availability and transport | CAR, second store, readiness/retention, primary failure | C10, C16–C17, D01–D08 |
-| 6. Minimal interactive/live agent | Veto/Survivor, two-region Ratatui/Crossterm frontend, headless commands, configurable Chat Completions; IPFS module | W07–W11; separate live smoke, credential/stream checks |
+| 6. Minimal interactive/live agent | Veto/Survivor, two-region Ratatui/Crossterm frontend, headless commands, provider profiles, local sessions; IPFS module | W07–W14; separate live smoke, credential/stream checks |
 
-A complete `raiv` 0.0.1 passes model-independent format/lifecycle tests, performs no I/O, retains no transcript, and has bounded restoration and phase/authority guards. A complete `raiv-agent` passes W01–W11 and demonstrates action→failure→retry→success→set_wake→receipt→Finish inside Wasmi, with live activation retained across inference and fresh-instance restoration at accepted checkpoints, then another ActorWake and provider loss. Both Veto and Survivor remain supported. The two-region TUI and headless scripted paths share guest semantics; live inference is configurable and credentials stay native. Intrinsic no-tool completion changes the decision trigger, not one-scope memory/history policy, identifiers/hash domains, state schemas, `raiv-state/1`, DASL/DRISL/CAR, Command/Finish boundaries, acceptance-before-effects, durable receipt continuation, or the separation of integrity, availability, and execution trust.
+A complete `raiv` passes model-independent format/lifecycle tests, performs no I/O, retains no transcript, and has bounded restoration and phase/authority guards. A complete `raiv-agent` passes W01–W14 and demonstrates action→failure→retry→success→set_wake→receipt→Finish inside Wasmi, with live activation retained across inference and fresh-instance restoration at accepted checkpoints, then another ActorWake and provider loss. Both Veto and Survivor remain supported. The two-region TUI and headless scripted paths share guest semantics; live inference is configurable and credentials stay native. Intrinsic no-tool completion changes the decision trigger, not one-scope memory/history policy, identifiers/hash domains, state schemas, `raiv-state/1`, DASL/DRISL/CAR, Command/Finish boundaries, acceptance-before-effects, durable receipt continuation, or the separation of integrity, availability, and execution trust.
 
 A blockchain deployment additionally requires a concrete host ABI, registration/authority mapping, finality, external inference inputs, and storage policy. A no_std build alone does not make it ready. None of these integrations require changing the nature of memory or adding a core verification network.
 
@@ -1066,4 +1089,4 @@ DASL CID, DRISL, and CAR publish revisions dated 2026-10-01. The implementation 
 - **[S12] DASL IPFS interoperability:** https://dasl.ing/ipfs.html
 - **[S13] DASL test matrix:** https://hyphacoop.github.io/dasl-testing/
 
-**Delivery status:** design specification. This delivery does not implement Rust code or execute a no_std build, integration smoke tests, or the 91 acceptance checks; those determine implementation readiness.
+**Implementation status:** this document is normative. Implementation progress, evidence and open work live in CHANGELOG.md and BACKLOG.md; only executed C/L/H/T/D/W/M checks, not this text, determine implementation readiness.

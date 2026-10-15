@@ -1,4 +1,5 @@
 //! Source-relative candidate DATA validation; no module approval, CAS or dispatch permission.
+
 use crate::output::{Blocks, Candidate};
 use raiv::{
     format::DaslCid,
@@ -8,6 +9,7 @@ use raiv::{
     state::Continuation,
 };
 use std::fmt;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum VerificationError {
     Binding,
@@ -15,6 +17,7 @@ pub enum VerificationError {
     Delta,
     Graph(GraphError),
 }
+
 impl fmt::Display for VerificationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -25,7 +28,9 @@ impl fmt::Display for VerificationError {
         })
     }
 }
+
 impl std::error::Error for VerificationError {}
+
 /// Restore the complete required closure, then join it to the immutable source and exact
 /// packet. Successful return remains protocol DATA, not authoritative HEAD or execution.
 /// Caller bounds apply to the resulting closure; the source was independently restored.
@@ -133,10 +138,12 @@ pub fn restore(
     }
     Ok(next)
 }
+
 struct Overlay<'a> {
     source: &'a RestoredAgent,
     delta: Blocks<'a>,
 }
+
 impl MaterializedBlocks for Overlay<'_> {
     fn get(&self, cid: DaslCid) -> Option<&[u8]> {
         self.delta.get(cid).or_else(|| {

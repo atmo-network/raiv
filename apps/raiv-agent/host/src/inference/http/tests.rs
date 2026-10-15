@@ -4,7 +4,9 @@ use std::{
     cell::Cell,
     io::{self, Cursor},
 };
+
 const KEY: &str = "OFFLINE_SECRET_TOKEN_SENTINEL";
+
 fn config(stream: bool) -> ProviderConfig {
     ProviderConfig {
         protocol: "openai-chat-completions".into(),
@@ -24,6 +26,7 @@ fn config(stream: bool) -> ProviderConfig {
         },
     }
 }
+
 fn client(stream: bool) -> ChatCompletionsClient {
     ChatCompletionsClient::with_lookup(config(stream), |name| {
         assert_eq!(name, "TEST_INFERENCE_KEY");
@@ -31,6 +34,7 @@ fn client(stream: bool) -> ChatCompletionsClient {
     })
     .unwrap()
 }
+
 #[test]
 fn session_routing_is_native_bounded_once_and_never_secret_or_header_injection() {
     let routed = client(false).with_session_id("raiv-event-0123").unwrap();
@@ -50,12 +54,15 @@ fn session_routing_is_native_bounded_once_and_never_secret_or_header_injection()
     }
     assert!(client(false).session.is_none());
 }
+
 fn request() -> Value {
     json!({"model":"m","stream":false,"max_tokens":128,"messages":[{"role":"system","content":"guest policy"},{"role":"user","content":"guest context"}],"n":1})
 }
+
 fn reply() -> Vec<u8> {
     serde_json::to_vec(&json!({"model":"m","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"ok"}}]})).unwrap()
 }
+
 fn headers(stream: bool) -> HeaderMap {
     let mut h = HeaderMap::new();
     h.insert(
@@ -68,6 +75,7 @@ fn headers(stream: bool) -> HeaderMap {
     );
     h
 }
+
 #[test]
 fn exact_https_resource_aliases_and_bad_configuration_precede_environment_lookup() {
     for (base, want) in [
@@ -101,7 +109,7 @@ fn exact_https_resource_aliases_and_bad_configuration_precede_environment_lookup
             "https://opencode.ai/zen/go/v1/chat/completions"
         );
     }
-    for selector in ["openai-completions", "scripted", "anthropic-messages"] {
+    for selector in ["openai-completions", "scripted", "messages-v1"] {
         let mut cfg = config(false);
         cfg.protocol = selector.into();
         let called = Cell::new(false);
@@ -116,6 +124,7 @@ fn exact_https_resource_aliases_and_bad_configuration_precede_environment_lookup
     cfg.api_key_env = "secret-value-with-dashes".into();
     assert!(ChatCompletionsClient::with_lookup(cfg, |_| panic!("no key lookup")).is_err());
 }
+
 #[test]
 fn credential_port_is_name_only_missing_invalid_and_debug_never_expose_value() {
     for key in [
@@ -153,6 +162,7 @@ fn credential_port_is_name_only_missing_invalid_and_debug_never_expose_value() {
         assert!(!format!("{error:?}: {error}").contains(KEY));
     }
 }
+
 #[test]
 fn request_model_stream_max_tokens_single_choice_roles_duplicates_and_secret_echo_fail_before_post()
 {
@@ -191,12 +201,15 @@ fn request_model_stream_max_tokens_single_choice_roles_duplicates_and_secret_ech
         .validate_request(duplicate, &Limits::default())
         .is_err());
 }
+
 struct NeverRead;
+
 impl Read for NeverRead {
     fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
         panic!("error body must not be consumed")
     }
 }
+
 #[test]
 fn status_redirect_type_encoding_and_declared_limit_fail_without_error_body_echo() {
     let client = client(false);
@@ -258,6 +271,7 @@ fn status_redirect_type_encoding_and_declared_limit_fail_without_error_body_echo
         .read_response(1, 200, &h, NeverRead, &Limits::default())
         .is_err());
 }
+
 #[test]
 fn json_success_full_u64_correlation_and_actual_length_caps_do_not_trust_header_or_model() {
     let client = client(false);
@@ -321,13 +335,16 @@ fn json_success_full_u64_correlation_and_actual_length_caps_do_not_trust_header_
     assert_eq!(error, ClientError::Response);
     assert!(!format!("{error:?}: {error}").contains(KEY));
 }
+
 fn sse() -> Vec<u8> {
     format!("data: {}\n\ndata: [DONE]\n\n",serde_json::to_string(&json!({"id":"response","model":"m","choices":[{"index":0,"delta":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]})).unwrap()).into_bytes()
 }
+
 struct FailureAfter {
     body: Cursor<Vec<u8>>,
     kind: io::ErrorKind,
 }
+
 impl Read for FailureAfter {
     fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
         let n = self.body.read(out)?;
@@ -338,6 +355,7 @@ impl Read for FailureAfter {
         }
     }
 }
+
 #[test]
 fn sse_done_plus_reader_error_timeout_or_truncated_eof_cannot_advance_partial_reply() {
     let client = client(true);
@@ -391,6 +409,7 @@ fn sse_done_plus_reader_error_timeout_or_truncated_eof_cannot_advance_partial_re
         Some(ClientError::Stream(StreamError::Incomplete))
     );
 }
+
 #[test]
 fn sse_failure_categories_survive_transport_without_disclosing_provider_data() {
     use crate::inference::NormalizeError;
@@ -426,6 +445,7 @@ fn sse_failure_categories_survive_transport_without_disclosing_provider_data() {
         assert!(!format!("{error:?}: {error}").contains(KEY));
     }
 }
+
 #[test]
 fn normalized_text_tool_or_reasoning_credential_echo_is_withheld_even_when_json_escaped() {
     let selected = client(false);

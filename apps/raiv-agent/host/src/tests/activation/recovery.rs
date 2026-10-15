@@ -12,6 +12,7 @@ use raiv::{
     format::{DaslCid, DaslCodec, DecodeLimits},
     limits::Limits,
 };
+
 fn caps() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -19,6 +20,7 @@ fn caps() -> ManifestLimits {
         max_admissions: 10,
     }
 }
+
 fn save(
     disk: &mut DiskBlockStore,
     registered: &crate::registry::RegisteredAgent,
@@ -38,6 +40,7 @@ fn save(
         resources: data.resources(),
     }
 }
+
 fn finish(
     wasm: &[u8],
     registry: &mut Registry,
@@ -63,6 +66,7 @@ fn finish(
     ram.place(run.snapshot().unwrap()).unwrap();
     accept_ram(registry, book, &token, &mut run, &ram).unwrap();
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn recovered_consumed_ids_cannot_replay_fresh_run_works_and_unresolved_launch_remains_blocked() {
@@ -143,6 +147,7 @@ fn recovered_consumed_ids_cannot_replay_fresh_run_works_and_unresolved_launch_re
         Err(AdmissionError::Busy)
     ));
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn recovered_pending_command_is_exact_and_wake_cannot_bypass_it_or_dispatch_an_effect() {

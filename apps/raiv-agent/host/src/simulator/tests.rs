@@ -1,4 +1,5 @@
 //! Private FSM fixtures are command DATA; public approval/readback is exercised in Wasmi tests.
+
 use super::*;
 use raiv::{
     command::CommandSpec,
@@ -6,6 +7,7 @@ use raiv::{
     position::Position,
     receipt::{Outcome, ReceiptSpec},
 };
+
 pub(super) fn entry(agent: u8, action: u8) -> Entry {
     Entry {
         anchor: Anchor {
@@ -34,10 +36,12 @@ pub(super) fn entry(agent: u8, action: u8) -> Entry {
         receipt: None,
     }
 }
+
 fn ticket(book: &mut ExecutorBook, entry: Entry) -> ActionTicket {
     let index = book.stage(&entry).unwrap();
     book.publish(index, entry)
 }
+
 pub(super) fn receipt(book: &ExecutorBook, ticket: ActionTicket, outcome: Outcome) -> Receipt {
     let record = book.record(ticket).unwrap();
     Receipt::encode(
@@ -58,6 +62,7 @@ pub(super) fn receipt(book: &ExecutorBook, ticket: ActionTicket, outcome: Outcom
     )
     .unwrap()
 }
+
 #[test]
 fn one_correlated_intent_unknown_wait_and_no_terminal_before_submission_are_atomic() {
     assert!(matches!(
@@ -117,6 +122,7 @@ fn one_correlated_intent_unknown_wait_and_no_terminal_before_submission_are_atom
     assert_eq!(book.record(action).unwrap(), submitted);
     assert_eq!(book.len(), 1);
 }
+
 #[test]
 fn every_terminal_outcome_is_immutable_exact_duplicate_known_and_never_resubmitted() {
     for outcome in [Outcome::Succeeded, Outcome::Failed, Outcome::NotExecuted] {
@@ -154,6 +160,7 @@ fn every_terminal_outcome_is_immutable_exact_duplicate_known_and_never_resubmitt
         assert_eq!(book.record(action).unwrap(), terminal);
     }
 }
+
 #[test]
 fn slot_anchor_program_command_policy_conflicts_capacity_and_receipt_limits_preserve_state() {
     let mut book = ExecutorBook::new(1).unwrap();

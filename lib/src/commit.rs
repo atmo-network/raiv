@@ -19,6 +19,7 @@ pub struct CommitCandidate {
     snapshot: RestoredAgent,
     new_cids: Vec<DaslCid>,
 }
+
 impl CommitCandidate {
     pub(crate) fn from_validated(
         binding: InputBinding,
@@ -41,23 +42,29 @@ impl CommitCandidate {
             new_cids,
         })
     }
+
     pub fn binding(&self) -> InputBinding {
         self.binding
     }
+
     pub fn new_root(&self) -> DaslCid {
         self.snapshot.root()
     }
+
     pub fn disposition(&self) -> Continuation {
         self.snapshot.state().continuation()
     }
+
     /// Validated DATA for inspection/recovery, never evidence of host acceptance.
     pub fn snapshot(&self) -> &RestoredAgent {
         &self.snapshot
     }
+
     /// The whole exact required closure, not just blocks newly authored by this run.
     pub fn blocks(&self) -> impl Iterator<Item = (DaslCid, &[u8])> {
         self.snapshot.blocks()
     }
+
     /// Exact unique delta relative to the source closure, ordered by binary CID.
     /// Unchanged or previously retained Memory blocks are reused, not emitted twice.
     pub fn new_blocks(&self) -> impl ExactSizeIterator<Item = (DaslCid, &[u8])> {
@@ -72,6 +79,7 @@ impl CommitCandidate {
             )
         })
     }
+
     /// Same bytes embedded in the final Boundary, not another mutable dispatch payload.
     pub fn command_bytes(&self) -> Option<&[u8]> {
         let episode = self.snapshot.current_episode()?;
@@ -89,6 +97,7 @@ impl CommitCandidate {
             Exit::AwaitActor => None,
         }
     }
+
     /// Transfer checkpoint data only. The host must resolve acceptance before using
     /// this as canonical continuation; a Rust snapshot does not establish HEAD.
     pub fn into_snapshot(self) -> RestoredAgent {

@@ -1,8 +1,11 @@
 //! Owns bounded typed checkpoint inspection/restoration, not I/O or host authority.
 
 mod restored;
+
 pub use restored::RestoredAgent;
+
 mod inspection;
+
 pub use inspection::{
     AdmissionGrantError, EpisodeRoleError, HistoryConsistencyError, IdentityError,
     InspectedClosure, MemoryConsistencyError, ToolBindingError, TransitionError, UsageLimitError,
@@ -52,16 +55,19 @@ impl From<CodecError> for GraphError {
         Self::Codec(error)
     }
 }
+
 impl From<StateError> for GraphError {
     fn from(error: StateError) -> Self {
         Self::State(error)
     }
 }
+
 impl From<DefinitionError> for GraphError {
     fn from(error: DefinitionError) -> Self {
         Self::Definition(error)
     }
 }
+
 impl From<MemoryError> for GraphError {
     fn from(error: MemoryError) -> Self {
         Self::Memory(error)
@@ -73,11 +79,13 @@ impl From<crate::episode::EpisodeError> for GraphError {
         Self::Episode(error)
     }
 }
+
 impl From<crate::boundary::BoundaryError> for GraphError {
     fn from(error: crate::boundary::BoundaryError) -> Self {
         Self::Boundary(error)
     }
 }
+
 impl From<crate::input::InputError> for GraphError {
     fn from(error: crate::input::InputError) -> Self {
         Self::Input(error)

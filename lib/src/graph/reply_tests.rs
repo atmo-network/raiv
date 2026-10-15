@@ -4,6 +4,7 @@ use crate::{
     definition::ToolControl,
     tools::ToolSet,
 };
+
 fn map(entries: Vec<(&str, Cbor)>) -> Cbor {
     Cbor::Map(
         entries
@@ -12,6 +13,7 @@ fn map(entries: Vec<(&str, Cbor)>) -> Cbor {
             .collect(),
     )
 }
+
 pub(super) fn call(id: &str, args: Cbor) -> Cbor {
     map(vec![
         ("call_id", Cbor::Text(id.into())),
@@ -19,6 +21,7 @@ pub(super) fn call(id: &str, args: Cbor) -> Cbor {
         ("arguments", args),
     ])
 }
+
 pub(super) fn frame(request: u64, calls: Vec<Cbor>) -> Cbor {
     map(vec![
         ("request_id", Cbor::Integer(request.into())),
@@ -36,6 +39,7 @@ pub(super) fn frame(request: u64, calls: Vec<Cbor>) -> Cbor {
         ),
     ])
 }
+
 #[test]
 fn correlation_precedes_parsing_and_body_ids_closed_schemas_and_truncation_do_not_consume_pending_state(
 ) {
@@ -111,6 +115,7 @@ fn correlation_precedes_parsing_and_body_ids_closed_schemas_and_truncation_do_no
     );
     run.control(ToolControl::Finish).unwrap();
 }
+
 #[test]
 fn complete_multi_call_frames_consume_correlation_once_but_select_no_first_call_and_recover_with_all_native_ids(
 ) {
@@ -162,6 +167,7 @@ fn complete_multi_call_frames_consume_correlation_once_but_select_no_first_call_
     run.corrective_turn().unwrap();
     assert_eq!(run.budget().used().corrective_turns, 2);
 }
+
 #[test]
 fn reply_limits_intersect_definition_and_caller_without_using_structural_block_limits_or_truncating_frames(
 ) {
@@ -235,6 +241,7 @@ fn reply_limits_intersect_definition_and_caller_without_using_structural_block_l
         .is_ok());
     assert_eq!(run.phase(), InferencePhase::ReplyReady);
 }
+
 #[test]
 fn another_definition_cannot_supply_wider_reply_limits_and_no_byte_view_authorizes_tools() {
     let fixture = &fixtures()[0];

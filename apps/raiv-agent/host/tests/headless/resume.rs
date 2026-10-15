@@ -1,4 +1,5 @@
 //! Installed primary-ledger terminal -> one fresh guest activation retaining the accepted Episode.
+
 use super::*;
 use super::{
     execution::{command_binding, execute, plan},
@@ -18,6 +19,7 @@ use raiv_agent_host::{
     checkpoint::{CheckpointManifest, ManifestLimits},
     disk::DiskBlockStore,
 };
+
 fn resume(home: &Path, digest: &str) -> Output {
     Command::new(env!("CARGO_BIN_EXE_raiv-agent"))
         .arg("resume")
@@ -36,6 +38,7 @@ fn resume(home: &Path, digest: &str) -> Output {
         .output()
         .unwrap()
 }
+
 fn result_input(home: &Path, receipt: &Receipt) {
     let mut approved = grant();
     approved.admission_id = [0x76; 32];
@@ -62,12 +65,14 @@ fn result_input(home: &Path, receipt: &Receipt) {
     )
     .unwrap();
 }
+
 fn from_hex(value: &str) -> Vec<u8> {
     (0..value.len())
         .step_by(2)
         .map(|i| u8::from_str_radix(&value[i..i + 2], 16).unwrap())
         .collect()
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_resume_requires_installed_exact_receipt_and_retains_episode_memory_counts_for_finish_or_retry(

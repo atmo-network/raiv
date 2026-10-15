@@ -1,4 +1,5 @@
 //! Linux exact-byte block persistence only; no manifest/HEAD/effect acceptance.
+
 use crate::store::{MemoryBlockStore, StoreError, StoreLimits};
 use raiv::{
     format::{validate_drisl, DaslCid, DecodeLimits},
@@ -17,10 +18,13 @@ use std::{
     path::Path,
     sync::atomic::AtomicU64,
 };
+
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(1);
+
 pub mod manifest;
 #[cfg(test)]
 pub(crate) mod tests;
+
 #[derive(Debug)]
 pub enum DiskError {
     Io(io::Error),
@@ -29,6 +33,7 @@ pub enum DiskError {
     Length,
     OriginExhausted,
 }
+
 impl fmt::Display for DiskError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -40,12 +45,15 @@ impl fmt::Display for DiskError {
         }
     }
 }
+
 impl std::error::Error for DiskError {}
+
 impl From<io::Error> for DiskError {
     fn from(e: io::Error) -> Self {
         Self::Io(e)
     }
 }
+
 /// Hold an exclusive cooperative Linux directory lock. All file operations are relative
 /// to the held descriptor, so renaming/replacing the directory path cannot retarget them.
 /// Only open an existing operator-owned directory; no implicit creation/genesis/recovery.
@@ -58,6 +66,7 @@ pub struct DiskBlockStore {
     directory: File,
     wire: DecodeLimits,
 }
+
 impl DiskBlockStore {
     pub fn open_existing(path: &Path, wire: DecodeLimits) -> Result<Self, DiskError> {
         let directory = OpenOptions::new()
@@ -77,10 +86,12 @@ impl DiskBlockStore {
             manifest_failure_countdown: None,
         })
     }
+
     /// Exclusive metadata-file writer over the same held directory/lock.
     pub fn manifest(&mut self, wire: DecodeLimits) -> manifest::ManifestFile<'_> {
         manifest::ManifestFile::new(self, wire)
     }
+
     /// Existing identical bytes are verified/fsynced, never blindly overwritten.
     pub fn put(&self, cid: DaslCid, body: &[u8]) -> Result<(), DiskError> {
         Self::validate(cid, body, &self.wire)?;
@@ -133,10 +144,12 @@ impl DiskBlockStore {
         self.directory.sync_all()?;
         Ok(())
     }
+
     /// Explicit I/O port, not a hydrating MaterializedBlocks implementation.
     pub fn load(&self, cid: DaslCid) -> Result<Vec<u8>, DiskError> {
         self.load_capped(cid, &self.wire)
     }
+
     /// Partial staging on failure is allowed; no manifest/HEAD is changed by placement.
     pub fn place(&self, snapshot: &RestoredAgent) -> Result<(), DiskError> {
         for (cid, body) in snapshot.blocks() {
@@ -144,6 +157,7 @@ impl DiskBlockStore {
         }
         Ok(())
     }
+
     /// Explicitly materialize a known complete dependency set before invoking Core.
     /// Unknown closure discovery/restart from a root alone remains the manifest owner.
     pub fn readback(
@@ -175,6 +189,7 @@ impl DiskBlockStore {
         ram.readback(expected, caller).map_err(DiskError::Data)?;
         Ok(ram)
     }
+
     pub(crate) fn load_capped(
         &self,
         cid: DaslCid,
@@ -192,6 +207,7 @@ impl DiskBlockStore {
         let mut file = self.open_file(&Self::name(cid), libc::O_RDONLY | libc::O_NONBLOCK)?;
         self.read_file(cid, &mut file, &wire)
     }
+
     fn validate(cid: DaslCid, body: &[u8], wire: &DecodeLimits) -> Result<(), DiskError> {
         cid.require_state()
             .map_err(|_| DiskError::Data(StoreError::Integrity))?;
@@ -199,6 +215,7 @@ impl DiskBlockStore {
         cid.verify(body)
             .map_err(|_| DiskError::Data(StoreError::Integrity))
     }
+
     fn read_file(
         &self,
         cid: DaslCid,
@@ -209,6 +226,7 @@ impl DiskBlockStore {
         Self::validate(cid, &bytes, wire)?;
         Ok(bytes)
     }
+
     fn read_bytes(file: &mut File, max_bytes: u64) -> Result<Vec<u8>, DiskError> {
         let metadata = file.metadata()?;
         if !metadata.is_file() {
@@ -230,13 +248,16 @@ impl DiskBlockStore {
         }
         Ok(bytes)
     }
+
     /// Bounded held-FD namespace inspection DATA, not approval to seed, repair or dispatch.
     pub fn is_empty_namespace(&self) -> Result<bool, DiskError> {
         self.directory_is_empty()
     }
+
     pub(crate) fn directory_is_empty(&self) -> Result<bool, DiskError> {
         self.directory_entries_match(|_| false)
     }
+
     pub(crate) fn directory_is_source_baseline(
         &self,
         source: &RestoredAgent,
@@ -249,6 +270,7 @@ impl DiskBlockStore {
                     .is_some_and(|cid| source.blocks().any(|(key, _)| key == cid))
         })
     }
+
     fn directory_entries_match(
         &self,
         mut allowed: impl FnMut(&[u8]) -> bool,
@@ -296,9 +318,11 @@ impl DiskBlockStore {
             }
         }
     }
+
     fn name(cid: DaslCid) -> CString {
         CString::new(cid.to_string()).expect("fixed canonical CID alphabet")
     }
+
     fn open_file(&self, name: &CString, flags: libc::c_int) -> Result<File, DiskError> {
         // SAFETY: owned directory FD and NUL-terminated internal filename are live;
         // O_NOFOLLOW rejects final symlinks, mode applies only to O_CREAT. We take

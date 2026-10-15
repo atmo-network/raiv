@@ -1,14 +1,19 @@
 //! Closed private native array codec; complete nested-schema/join checks before payload copy.
+
 use super::*;
 use minicbor::{encode::Write, Decoder, Encoder};
 use raiv::command::CommandView;
+
 type Error = ExecutorCheckpointError;
+
 struct Writer {
     bytes: Vec<u8>,
     max: u64,
 }
+
 impl Write for Writer {
     type Error = Error;
+
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), Error> {
         if self
             .bytes
@@ -25,9 +30,11 @@ impl Write for Writer {
         Ok(())
     }
 }
+
 fn enc(e: minicbor::encode::Error<Error>) -> Error {
     e.into_write().unwrap_or(Error::Schema)
 }
+
 #[cfg(test)]
 pub(super) fn encode(
     agent: Id32,
@@ -37,6 +44,7 @@ pub(super) fn encode(
 ) -> Result<Vec<u8>, Error> {
     encode_stage(agent, program, rows, limits, None)
 }
+
 #[cfg(test)]
 pub(super) fn encode_stage(
     agent: Id32,
@@ -53,6 +61,7 @@ pub(super) fn encode_stage(
         submitted.map(Change::Submitted),
     )
 }
+
 pub(super) fn encode_change(
     agent: Id32,
     program: ProgramBinding,
@@ -106,26 +115,31 @@ pub(super) fn encode_change(
     }
     Ok(e.into_writer().bytes)
 }
+
 fn array(d: &mut Decoder<'_>, n: u64) -> Result<(), Error> {
     if d.array().map_err(|_| Error::Schema)? != Some(n) {
         return Err(Error::Schema);
     }
     Ok(())
 }
+
 fn id(d: &mut Decoder<'_>) -> Result<Id32, Error> {
     d.bytes()
         .map_err(|_| Error::Schema)?
         .try_into()
         .map_err(|_| Error::Schema)
 }
+
 fn cid(d: &mut Decoder<'_>) -> Result<DaslCid, Error> {
     DaslCid::from_bytes(d.bytes().map_err(|_| Error::Schema)?)
         .and_then(DaslCid::require_state)
         .map_err(|_| Error::Schema)
 }
+
 fn number(d: &mut Decoder<'_>) -> Result<u64, Error> {
     d.u64().map_err(|_| Error::Schema)
 }
+
 fn span(d: &mut Decoder<'_>, frame: &[u8]) -> Result<Range<usize>, Error> {
     let bytes = d.bytes().map_err(|_| Error::Schema)?;
     let end = d.position();
@@ -135,6 +149,7 @@ fn span(d: &mut Decoder<'_>, frame: &[u8]) -> Result<Range<usize>, Error> {
     }
     Ok(start..end)
 }
+
 pub(super) fn inspect(
     bytes: &[u8],
     limits: &ExecutorLimits,

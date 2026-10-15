@@ -1,5 +1,6 @@
 //! Local administrative ActorWake/ActionResult admission, not executor authentication.
 //! No effect ledger, lost-unit policy or CAS; durable composition has separate owners.
+
 use crate::{
     registry::RegisteredAgent,
     run::{ProgramBinding, Run, RunError},
@@ -12,7 +13,9 @@ use raiv::{
     state::Continuation,
 };
 use std::{fmt, sync::atomic::AtomicU64};
+
 static NEXT_BOOK: AtomicU64 = AtomicU64::new(1);
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AdmissionStatus {
     Reserved,
@@ -20,6 +23,7 @@ pub enum AdmissionStatus {
     Launched,
     Consumed,
 }
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct AdmissionRecord {
     pub binding: InputBinding,
@@ -28,12 +32,14 @@ pub struct AdmissionRecord {
     pub launch_attempts: u64,
     pub accepted_root: Option<raiv::format::DaslCid>,
 }
+
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum TokenState {
     Issued,
     #[cfg(target_os = "linux")]
     Recovered,
 }
+
 struct Entry {
     token_state: TokenState,
     registry_origin: u64,
@@ -41,25 +47,30 @@ struct Entry {
     program: ProgramBinding,
     run_origin: Option<u64>,
 }
+
 #[cfg(target_os = "linux")]
 pub(crate) struct RecoveredAdmissions(Vec<Entry>);
+
 /// Private fields prevent a provider/input payload from claiming admission or mutating
 /// observation/grant after reservation. Dropping it does NOT release its reserved IDs.
 pub struct AdmittedInput {
     book: u64,
     packet: PreparedInput,
 }
+
 /// Crate-private linear staging; only the originating mutably held book may publish.
 pub(crate) struct StagedReservation {
     entry: Entry,
     token: AdmittedInput,
     expected_len: usize,
 }
+
 impl AdmittedInput {
     pub fn packet(&self) -> &PreparedInput {
         &self.packet
     }
 }
+
 #[derive(Debug)]
 pub enum AdmissionError {
     InvalidCapacity,
@@ -78,6 +89,7 @@ pub enum AdmissionError {
     Input(raiv::input::InputError),
     Run(RunError),
 }
+
 impl fmt::Display for AdmissionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -103,7 +115,9 @@ impl fmt::Display for AdmissionError {
         })
     }
 }
+
 impl std::error::Error for AdmissionError {}
+
 /// Possession of this mutable book is the local native Actor/admission administrative
 /// port. Do not expose it to guest/provider/public payloads. All records are volatile.
 pub struct AdmissionBook {
@@ -111,6 +125,7 @@ pub struct AdmissionBook {
     capacity: usize,
     entries: Vec<Entry>,
 }
+
 impl AdmissionBook {
     pub fn new(capacity: usize) -> Result<Self, AdmissionError> {
         if capacity == 0 {
@@ -124,6 +139,7 @@ impl AdmissionBook {
             entries: Vec::new(),
         })
     }
+
     pub(crate) fn records_for(
         &self,
         registered: &RegisteredAgent,
@@ -142,6 +158,7 @@ impl AdmissionBook {
             .filter(move |e| e.record.binding.agent_id == id)
             .map(|e| e.record))
     }
+
     #[cfg(target_os = "linux")]
     pub(crate) fn stage_recovered(
         &mut self,
@@ -183,16 +200,20 @@ impl AdmissionBook {
             .map_err(|_| AdmissionError::Allocation)?;
         Ok(RecoveredAdmissions(staged))
     }
+
     #[cfg(target_os = "linux")]
     pub(crate) fn publish_recovered(&mut self, staged: RecoveredAdmissions) {
         self.entries.extend(staged.0);
     }
+
     pub fn len(&self) -> usize {
         self.entries.len()
     }
+
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+
     pub fn record(&self, agent: Id32, event: Id32) -> Option<AdmissionRecord> {
         self.entries
             .iter()
@@ -201,6 +222,7 @@ impl AdmissionBook {
             })
             .map(|e| e.record)
     }
+
     /// Explicit native approval of the exact observation snapshot and grant. The grant
     /// comes from native policy, not from model/provider arguments. No external Actor
     /// principal verification, authentic pricing or lifetime funding is inferred here.
@@ -219,6 +241,7 @@ impl AdmissionBook {
         Self::validate_input(registered, &input, &raiv::limits::Limits::default())?;
         self.reserve(registered, input, approved_grant)
     }
+
     /// Explicit LOCAL administrative approval of this exact terminal Receipt and grant.
     /// Never call from a guest/provider payload. Receipt construction/matching is data,
     /// not evidence of execution/finality; executor/authenticated-ledger policy is separate.
@@ -233,6 +256,7 @@ impl AdmissionBook {
             self.stage_action_result(registered, input, approved_receipt, approved_grant)?;
         Ok(self.publish_reservation(staged))
     }
+
     pub(crate) fn stage_action_result(
         &mut self,
         registered: &RegisteredAgent,
@@ -253,6 +277,7 @@ impl AdmissionBook {
         Self::validate_input(registered, &input, &raiv::limits::Limits::default())?;
         self.stage_reservation(registered, input, approved_grant)
     }
+
     pub(crate) fn validate_input(
         registered: &RegisteredAgent,
         input: &ActivationInput,
@@ -266,6 +291,7 @@ impl AdmissionBook {
             }
         })
     }
+
     fn reserve(
         &mut self,
         registered: &RegisteredAgent,
@@ -275,6 +301,7 @@ impl AdmissionBook {
         let staged = self.stage_reservation(registered, input, approved_grant)?;
         Ok(self.publish_reservation(staged))
     }
+
     fn stage_reservation(
         &mut self,
         registered: &RegisteredAgent,
@@ -340,6 +367,7 @@ impl AdmissionBook {
             },
         })
     }
+
     /// No allocation/check left after a composition root's final fsync. The mutable
     /// book stays exclusively held between staging and publication; no callbacks run.
     pub(crate) fn publish_reservation(&mut self, staged: StagedReservation) -> AdmittedInput {
@@ -355,6 +383,7 @@ impl AdmissionBook {
         self.entries.push(staged.entry);
         staged.token
     }
+
     /// A reservation permits only one launch attempt. Failure remains unresolved and
     /// cannot refund/free/relaunch by dropping the token. Counts are native launch
     /// attempts, NOT inferred model calls, actual expense or lost execution units.
@@ -378,6 +407,7 @@ impl AdmissionBook {
             Err(e) => Err(AdmissionError::Run(e)),
         }
     }
+
     #[cfg(target_os = "linux")]
     pub(crate) fn recoverable_reserved(
         &self,
@@ -413,6 +443,7 @@ impl AdmissionBook {
         }
         Ok((index, e.record))
     }
+
     #[cfg(target_os = "linux")]
     pub(crate) fn issue_recovered(&mut self, index: usize, packet: PreparedInput) -> AdmittedInput {
         self.entries[index].token_state = TokenState::Issued;
@@ -421,6 +452,7 @@ impl AdmissionBook {
             packet,
         }
     }
+
     pub(crate) fn reserved_entry(
         &self,
         registered: &RegisteredAgent,
@@ -432,14 +464,17 @@ impl AdmissionBook {
         }
         Ok(index)
     }
+
     pub(crate) fn mark_attempt(&mut self, index: usize) {
         self.entries[index].record.status = AdmissionStatus::Attempted;
         self.entries[index].record.launch_attempts = 1;
     }
+
     pub(crate) fn mark_launched(&mut self, index: usize, origin: u64) {
         self.entries[index].run_origin = Some(origin);
         self.entries[index].record.status = AdmissionStatus::Launched;
     }
+
     /// Correlate only the run launched by this book, not a separately computed candidate.
     /// This is NOT event consumption or checkpoint/effect acceptance.
     pub fn matches_run(
@@ -454,6 +489,7 @@ impl AdmissionBook {
                 && run.program_binding() == registered.program_binding()
         })
     }
+
     pub(crate) fn sealed_entry(
         &self,
         token: &AdmittedInput,
@@ -476,10 +512,12 @@ impl AdmissionBook {
         }
         Ok((index, entry.record, entry.registry_origin))
     }
+
     pub(crate) fn consume_ram(&mut self, index: usize, root: raiv::format::DaslCid) {
         self.entries[index].record.accepted_root = Some(root);
         self.entries[index].record.status = AdmissionStatus::Consumed;
     }
+
     fn check_token(
         &self,
         registered: &RegisteredAgent,

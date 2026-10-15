@@ -6,11 +6,13 @@ use crate::{
     projection::InitialProjection,
 };
 use serde_json::json;
+
 fn patch_call(id: &str, args: Cbor) -> Cbor {
     let mut call = reply::call(id, args);
     map_mut(&mut call).insert("tool_id".into(), Cbor::Text("patch_memory".into()));
     call
 }
+
 #[test]
 fn selected_single_reply_arguments_transform_only_working_memory_and_preserve_initial_context_and_checkpoint_bytes(
 ) {
@@ -50,6 +52,7 @@ fn selected_single_reply_arguments_transform_only_working_memory_and_preserve_in
     assert_eq!(prefix.as_bytes(), before);
     assert_ne!(working.cid(), cid); // Pure normalization/transform, not registered runtime dispatch or units approval.
 }
+
 #[test]
 fn multiple_reply_calls_or_invalid_patch_shapes_never_choose_a_first_patch_or_mutate_checkpoint_memory(
 ) {

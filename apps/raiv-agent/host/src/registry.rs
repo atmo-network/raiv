@@ -1,4 +1,5 @@
 //! Native process-local administrative registry. No external auth, durability or dispatch.
+
 use crate::{
     run::{ProgramBinding, Run, RunError},
     BridgeError, GuestVm, VmLimits,
@@ -10,13 +11,16 @@ use raiv::{
     state::Continuation,
 };
 use std::{fmt, sync::atomic::AtomicU64};
+
 static NEXT_REGISTRY: AtomicU64 = AtomicU64::new(1);
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Anchor {
     pub agent_id: Id32,
     pub revision: u64,
     pub root: DaslCid,
 }
+
 #[derive(Debug)]
 pub enum RegistryError {
     InvalidCapacity,
@@ -28,6 +32,7 @@ pub enum RegistryError {
     Program(RunError),
     Bridge(BridgeError),
 }
+
 impl fmt::Display for RegistryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -42,7 +47,9 @@ impl fmt::Display for RegistryError {
         })
     }
 }
+
 impl std::error::Error for RegistryError {}
+
 /// Immutable module/Definition/domain approval and transaction-owned RAM anchor.
 /// External callers must never receive the administrative registration port unguarded.
 /// Actor/Receipt/grant freshness and acceptance are not supplied by this object.
@@ -52,13 +59,16 @@ pub struct RegisteredAgent {
     snapshot: RestoredAgent,
     resources: VmLimits,
 }
+
 impl RegisteredAgent {
     pub(crate) fn registry_origin(&self) -> u64 {
         self.registry_origin
     }
+
     pub(crate) fn resources(&self) -> VmLimits {
         self.resources
     }
+
     pub fn anchor(&self) -> Anchor {
         Anchor {
             agent_id: self.snapshot.state().agent_id(),
@@ -66,15 +76,19 @@ impl RegisteredAgent {
             root: self.snapshot.root(),
         }
     }
+
     pub fn program_binding(&self) -> ProgramBinding {
         self.program
     }
+
     pub(crate) fn install_ram(&mut self, snapshot: RestoredAgent) {
         self.snapshot = snapshot;
     }
+
     pub fn snapshot(&self) -> &RestoredAgent {
         &self.snapshot
     }
+
     /// The registered program and source cannot be supplied/replaced by an input sender.
     /// This authenticates the program against local administrative policy ONLY; the packet
     /// still needs trusted admission/provenance before a live provider is attached.
@@ -85,6 +99,7 @@ impl RegisteredAgent {
     ) -> Result<Run<'a>, RegistryError> {
         self.launch(wasm, packet).map_err(RegistryError::Program)
     }
+
     pub(crate) fn launch<'a>(
         &'a self,
         wasm: &[u8],
@@ -93,6 +108,7 @@ impl RegisteredAgent {
         Run::start(wasm, self.program, &self.snapshot, packet, self.resources)
     }
 }
+
 /// RAM-only native local-trusted administration. Possession of &mut Registry is the
 /// administrative port, not a payload flag or a claim about an external principal.
 /// Process loss loses the registry; do not use this as a crash-recovery manifest.
@@ -101,6 +117,7 @@ pub struct Registry {
     agents: Vec<RegisteredAgent>,
     capacity: usize,
 }
+
 impl Registry {
     pub fn new(capacity: usize) -> Result<Self, RegistryError> {
         if capacity == 0 {
@@ -114,22 +131,27 @@ impl Registry {
             capacity,
         })
     }
+
     pub fn len(&self) -> usize {
         self.agents.len()
     }
+
     pub fn is_empty(&self) -> bool {
         self.agents.is_empty()
     }
+
     pub fn agent(&self, id: Id32) -> Option<&RegisteredAgent> {
         self.agents
             .iter()
             .find(|entry| entry.anchor().agent_id == id)
     }
+
     pub(crate) fn agent_mut(&mut self, id: Id32) -> Option<&mut RegisteredAgent> {
         self.agents
             .iter_mut()
             .find(|entry| entry.anchor().agent_id == id)
     }
+
     /// Explicit administrative approval. Never called by guest output parsing/import.
     /// Snapshot validity is established by Core restoration, not fabricated/default state.
     /// All checks/allocation precede assignment; existing records cannot be overwritten.
@@ -158,6 +180,7 @@ impl Registry {
         self.publish_approved(entry);
         Ok(())
     }
+
     pub(crate) fn stage_approved(
         &mut self,
         wasm: &[u8],
@@ -187,6 +210,7 @@ impl Registry {
             resources,
         })
     }
+
     pub(crate) fn publish_approved(&mut self, entry: RegisteredAgent) {
         self.agents.push(entry);
     }

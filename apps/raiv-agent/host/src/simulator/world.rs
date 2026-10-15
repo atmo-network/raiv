@@ -1,5 +1,6 @@
 //! Primary one-file SCRIPTED virtual-unit world + exact executor/Receipt ledger.
 //! Synthetic quote=1, no money/market/portfolio/wake/backend/provenance or live permit.
+
 use super::{
     checkpoint::{ExecutorCheckpoint, ExecutorCheckpointError, ExecutorLimits},
     local::LocalExecutorLimits,
@@ -17,13 +18,19 @@ use raiv::{
     position::Position,
     receipt::{Outcome, ReceiptSpec},
 };
+
 mod admission;
+
 pub use admission::LedgerActionResult;
+
 mod recovery;
+
 pub use recovery::WorldRecoveryPin;
+
 #[cfg(test)]
 mod tests;
 mod wire;
+
 #[derive(Debug)]
 pub enum WorldError {
     Schema,
@@ -42,6 +49,7 @@ pub enum WorldError {
     Disk(DiskError),
     Manifest(ManifestError),
 }
+
 impl fmt::Display for WorldError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -69,7 +77,9 @@ impl fmt::Display for WorldError {
         })
     }
 }
+
 impl std::error::Error for WorldError {}
+
 /// DATA only on reading: independent world identity/seed must be selected by native policy.
 /// Available = initial - known virtual debits - unresolved one-unit reservations.
 /// The exact ledger contains each terminal debit in closed virtual_units costs; unknown
@@ -80,6 +90,7 @@ pub struct WorldState {
     available: u64,
     ledger: ExecutorCheckpoint,
 }
+
 impl WorldState {
     fn compose(
         id: Id32,
@@ -98,24 +109,31 @@ impl WorldState {
             ledger,
         })
     }
+
     pub fn decode(bytes: &[u8], limits: &ExecutorLimits) -> Result<Self, WorldError> {
         wire::decode(bytes, limits)
     }
+
     pub fn encode(&self, limits: &ExecutorLimits) -> Result<Vec<u8>, WorldError> {
         wire::encode(self, limits)
     }
+
     pub fn world_id(&self) -> Id32 {
         self.id
     }
+
     pub fn initial_units(&self) -> u64 {
         self.initial
     }
+
     pub fn available_units(&self) -> u64 {
         self.available
     }
+
     pub fn ledger(&self) -> &ExecutorCheckpoint {
         &self.ledger
     }
+
     pub fn read(store: &mut DiskBlockStore, limits: &ExecutorLimits) -> Result<Self, WorldError> {
         let bytes = ManifestFile::world(store, limits.wire)
             .read()
@@ -124,6 +142,7 @@ impl WorldState {
         Self::decode(&bytes, limits)
     }
 }
+
 /// Explicit native seed approval; hash/pin construction is not authentication/currentness.
 pub struct WorldGenesis {
     pub world_id: Id32,
@@ -131,6 +150,7 @@ pub struct WorldGenesis {
     pub capacity: usize,
     pub source: LocalRecoveryPin,
 }
+
 /// Scripted native terminal plan, not chosen by guest/provider arguments. Debit0/1 is a
 /// known virtual result bounded by the fixed synthetic quote, not an actual monetary bill.
 #[derive(Clone, Copy)]
@@ -139,6 +159,7 @@ pub struct ScriptedResult<'a> {
     pub result: &'a [u8],
     pub debit: u64,
 }
+
 /// Hold the independent world's mutable FD/lock; no externally mutable executor book.
 /// Its native identity/tickets are RAM-only. There is no auto-adoption or late bootstrap.
 pub struct ScriptedWorld<'a> {
@@ -146,6 +167,7 @@ pub struct ScriptedWorld<'a> {
     state: WorldState,
     book: ExecutorBook,
 }
+
 impl<'a> ScriptedWorld<'a> {
     pub fn bootstrap(
         registered: &RegisteredAgent,
@@ -213,19 +235,24 @@ impl<'a> ScriptedWorld<'a> {
             book,
         })
     }
+
     #[cfg(test)]
     pub(crate) fn fail_after_publish(&mut self, fail: bool) {
         self.store.fail_manifest_after_publish = fail;
     }
+
     pub fn state(&self) -> &WorldState {
         &self.state
     }
+
     pub fn record(&self, ticket: ActionTicket) -> Result<ExecutionRecord, WorldError> {
         self.book.record(ticket).map_err(WorldError::Simulator)
     }
+
     pub fn receipt(&self, ticket: ActionTicket) -> Result<Option<&Receipt>, WorldError> {
         self.book.receipt(ticket).map_err(WorldError::Simulator)
     }
+
     fn check_scope(&self, registered: &RegisteredAgent) -> Result<(), WorldError> {
         if self.state.ledger.agent_id() != registered.anchor().agent_id
             || self.state.ledger.program_binding() != registered.program_binding()
@@ -234,6 +261,7 @@ impl<'a> ScriptedWorld<'a> {
         }
         Ok(())
     }
+
     fn source_ready(
         &self,
         registered: &RegisteredAgent,
@@ -251,6 +279,7 @@ impl<'a> ScriptedWorld<'a> {
         .map_err(|e| WorldError::Simulator(SimulatorError::Policy(e)))?;
         Ok(())
     }
+
     fn publish(
         &mut self,
         next: &WorldState,
@@ -267,6 +296,7 @@ impl<'a> ScriptedWorld<'a> {
             .replace(Some(&old), &bytes)
             .map_err(WorldError::Manifest)
     }
+
     pub fn authorize_pending(
         &mut self,
         registered: &RegisteredAgent,
@@ -302,6 +332,7 @@ impl<'a> ScriptedWorld<'a> {
         self.state = next;
         Ok(ticket)
     }
+
     /// Persist one-unit reservation + Submitted BEFORE exposing even a submission record.
     /// Unknown conservatively installs that RAM reservation/intent without exposure; never
     /// treat already Submitted file bytes as fresh permission from a Ready RAM book.
@@ -362,6 +393,7 @@ impl<'a> ScriptedWorld<'a> {
             Err(error) => Err(error),
         }
     }
+
     /// The virtual effect (known debit/release) and exact Receipt live in ONE atomic file.
     /// No budget mutation/Receipt installation before fsync; unknown retains Submitted and
     /// its reservation. Identical next acknowledges without spending twice; conflict refuses.

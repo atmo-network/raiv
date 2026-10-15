@@ -1,5 +1,7 @@
 //! Bounded native scripted-administrator recipe. Pins advance only from its approved RAM owners.
+
 mod recipe;
+
 use super::{bounds, config::Config, fail, initialize, Result};
 use minicbor::encode::write::Write;
 use raiv::{
@@ -26,6 +28,7 @@ use raiv_agent_host::{
         world::{LedgerActionResult, ScriptedResult, ScriptedWorld, WorldGenesis},
     },
 };
+
 fn reply(id: u64, tool: Option<&str>, args: &[u8]) -> Result<Vec<u8>> {
     let mut e = minicbor::Encoder::new(minicbor::encode::write::Cursor::new([0u8; 4096]));
     e.map(4)?
@@ -60,6 +63,7 @@ fn reply(id: u64, tool: Option<&str>, args: &[u8]) -> Result<Vec<u8>> {
     bytes.extend_from_slice(data);
     Ok(bytes)
 }
+
 pub fn execute(config: &Config, definition: &Definition, module: &[u8]) -> Result<String> {
     let selected = config
         .world
