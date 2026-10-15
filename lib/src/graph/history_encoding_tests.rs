@@ -16,12 +16,14 @@ pub(super) fn text_id(value: &Cbor) -> Cbor {
     }
     Cbor::Text(text)
 }
+
 pub(super) fn decimal(value: &Cbor) -> Cbor {
     let Cbor::Integer(number) = value else {
         panic!("u64")
     };
     Cbor::Text(u64::try_from(*number).unwrap().to_string())
 }
+
 pub(super) fn normalized_receipt(value: &Cbor) -> Cbor {
     let mut result = value.clone();
     for name in ["action_id", "command_digest"] {
@@ -37,6 +39,7 @@ pub(super) fn normalized_receipt(value: &Cbor) -> Cbor {
     map_mut(&mut result).insert("finalized_at".into(), position);
     result
 }
+
 fn normalized_episode(snapshot: &RestoredAgent, episode: DaslCid) -> Cbor {
     let blocks = snapshot.blocks().collect::<BTreeMap<_, _>>();
     let episode = cbor(blocks[&episode]);
@@ -93,6 +96,7 @@ fn normalized_episode(snapshot: &RestoredAgent, episode: DaslCid) -> Cbor {
         ),
     ])
 }
+
 pub(super) fn oracle(snapshot: &RestoredAgent) -> Cbor {
     let state = cbor(snapshot.state().as_bytes());
     let Cbor::Array(history) = field(&state, "history") else {
@@ -126,6 +130,7 @@ pub(super) fn oracle(snapshot: &RestoredAgent) -> Cbor {
         ]),
     ])
 }
+
 fn model_depth(value: &Cbor) -> u64 {
     match value {
         Cbor::Array(values) => 1 + values.iter().map(model_depth).max().unwrap_or(0),
@@ -139,6 +144,7 @@ fn model_depth(value: &Cbor) -> u64 {
         _ => 1,
     }
 }
+
 fn encoded(snapshot: &RestoredAgent, limits: &Limits) -> Result<ModelValue, ProjectionError> {
     HistoryProjection::new(snapshot).encode(limits)
 }

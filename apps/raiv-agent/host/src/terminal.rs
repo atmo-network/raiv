@@ -1,5 +1,7 @@
 //! Native two-region presentation/input port. No inference, admission, pin selection or persistence.
+
 mod session;
+
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Position, Rect},
@@ -12,12 +14,14 @@ pub use session::TerminalSession;
 use std::{collections::VecDeque, fmt};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UiError {
     Bounds,
     Limit,
     Allocation,
 }
+
 impl fmt::Display for UiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -27,30 +31,55 @@ impl fmt::Display for UiError {
         })
     }
 }
+
 impl std::error::Error for UiError {}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Role {
     Operator,
     Model,
+    /// Accepted Memory presentation; never an editable or restored transcript.
+    Memory,
     Status,
     Error,
 }
+
 impl Role {
     fn label(self) -> &'static str {
         match self {
             Self::Operator => "You",
             Self::Model => "Agent",
-            Self::Status => "Status",
+            Self::Memory => "Memory",
+            Self::Status => "",
             Self::Error => "Error",
         }
     }
+
+    fn styles(self) -> (Style, Style) {
+        let label = Style::default().add_modifier(Modifier::BOLD);
+        match self {
+            Self::Operator => (label.fg(Color::Cyan), Style::default()),
+            Self::Model => (label.fg(Color::Green), Style::default()),
+            Self::Memory => (
+                label.fg(Color::Magenta),
+                Style::default().fg(Color::Magenta),
+            ),
+            Self::Status => (Style::default(), Style::default().fg(Color::DarkGray)),
+            Self::Error => (label.fg(Color::Red), Style::default().fg(Color::Red)),
+        }
+    }
 }
+
+/// Right-aligned role label plus separator; text wraps beside it.
+const GUTTER: usize = 9;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Signal {
     None,
     Submit,
     Exit,
 }
+
 /// Independent presentation caps, not Core context policy or permission to discard agent DATA.
 #[derive(Clone, Copy, Debug)]
 pub struct UiLimits {
@@ -58,10 +87,12 @@ pub struct UiLimits {
     pub history_bytes: usize,
     pub history_entries: usize,
 }
+
 struct Entry {
     role: Role,
     text: String,
 }
+
 pub struct TerminalUi {
     limits: UiLimits,
     prompt: String,
@@ -69,10 +100,12 @@ pub struct TerminalUi {
     history: VecDeque<Entry>,
     history_bytes: usize,
     history_scroll: usize,
+    rendered_lines: usize,
     pending: bool,
     enabled: bool,
     visible: bool,
 }
+
 fn display_text(text: &str) -> Result<String, UiError> {
     let mut result = String::new();
     result
@@ -89,6 +122,7 @@ fn display_text(text: &str) -> Result<String, UiError> {
     }
     Ok(result)
 }
+
 impl TerminalUi {
     pub fn new(limits: UiLimits) -> Result<Self, UiError> {
         if limits.prompt_bytes == 0 || limits.history_bytes == 0 || limits.history_entries == 0 {
@@ -101,17 +135,21 @@ impl TerminalUi {
             history: VecDeque::new(),
             history_bytes: 0,
             history_scroll: 0,
+            rendered_lines: 0,
             pending: false,
             enabled: true,
             visible: false,
         })
     }
+
     pub fn prompt(&self) -> &str {
         &self.prompt
     }
+
     pub fn is_pending(&self) -> bool {
         self.pending
     }
+
     /// Presentation-only completion. Caller must prove native outcome separately.
     /// Refused-before-attempt may retain text; unresolved native attempts must disable further submit.
     pub fn complete_input(&mut self, clear: bool) {
@@ -121,9 +159,11 @@ impl TerminalUi {
         }
         self.pending = false;
     }
+
     pub fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
     }
+
     /// Bounded RAM-only history; never restored/projected into guest context.
     /// Old presentation entries may be evicted, but inbound over-cap entries fail atomically.
     pub fn push_history(&mut self, role: Role, text: &str) -> Result<(), UiError> {
@@ -142,9 +182,9 @@ impl TerminalUi {
         }
         self.history_bytes += text.len();
         self.history.push_back(Entry { role, text });
-        self.history_scroll = 0;
         Ok(())
     }
+
     fn boundary_after(&self, cursor: usize) -> usize {
         self.prompt
             .grapheme_indices(true)
@@ -153,18 +193,21 @@ impl TerminalUi {
             .find(|i| *i >= cursor)
             .unwrap_or(self.prompt.len())
     }
+
     fn left(&self) -> usize {
         self.prompt[..self.cursor]
             .grapheme_indices(true)
             .next_back()
             .map_or(0, |(i, _)| i)
     }
+
     fn right(&self) -> usize {
         self.prompt[self.cursor..]
             .graphemes(true)
             .next()
             .map_or(self.cursor, |g| self.cursor + g.len())
     }
+
     fn insert(&mut self, text: &str) -> Result<(), UiError> {
         if self
             .prompt
@@ -181,6 +224,7 @@ impl TerminalUi {
         self.cursor = self.boundary_after(self.cursor + text.len());
         Ok(())
     }
+
     fn vertical(&mut self, down: bool) {
         let line_start = self.prompt[..self.cursor].rfind('\n').map_or(0, |i| i + 1);
         let col = self.prompt[line_start..self.cursor].width();
@@ -216,6 +260,7 @@ impl TerminalUi {
         }
         self.cursor = cursor;
     }
+
     /// Only native terminal Event DATA. Submit signal is not Actor/Receipt approval or acceptance.
     pub fn handle(&mut self, event: Event) -> Result<Signal, UiError> {
         if let Event::Resize(_, _) = event {
@@ -262,6 +307,7 @@ impl TerminalUi {
                     {
                         if self.visible && !self.prompt.trim().is_empty() {
                             self.pending = true;
+                            self.history_scroll = 0;
                             return Ok(Signal::Submit);
                         }
                     }
@@ -314,6 +360,7 @@ impl TerminalUi {
         }
         Ok(Signal::None)
     }
+
     /// Exactly two regions, all transient; no status/header/sidebar overlay or native approval implied.
     pub fn render(&mut self, frame: &mut Frame<'_>) {
         let area = frame.area();
@@ -324,43 +371,53 @@ impl TerminalUi {
         self.visible = area.width >= 8 && area.height >= 6;
         let history_block = Block::default()
             .borders(Borders::ALL)
-            .title(" Raiv · transient history ");
+            .title(" Raiv · conversation shown for this launch only ");
         let input_block = Block::default()
             .borders(Borders::ALL)
             .title(if self.pending {
-                " Prompt · waiting "
+                " Prompt · waiting for the agent… "
             } else if !self.enabled {
-                " Prompt · blocked "
+                " Prompt · closed · Esc exit "
             } else {
-                " Prompt · Enter send · Esc exit "
+                " Prompt · Enter send · Ctrl+J newline · PgUp/PgDn scroll · Esc exit "
             });
         let history_inner = history_block.inner(history);
         let input_inner = input_block.inner(input);
         let mut lines = Vec::new();
+        // Narrow terminals label every line instead of spending a fixed gutter.
+        let compact = (history_inner.width as usize) < 4 * GUTTER;
         for entry in &self.history {
-            let style = match entry.role {
-                Role::Operator => Style::default().add_modifier(Modifier::BOLD),
-                Role::Model => Style::default(),
-                Role::Status => Style::default().add_modifier(Modifier::DIM),
-                Role::Error => Style::default().fg(Color::Red),
-            };
-            for part in entry.text.split('\n') {
-                for line in visual_lines(
-                    part,
-                    (history_inner.width as usize).saturating_sub(entry.role.label().len() + 2),
-                ) {
-                    lines.push(Line::from(Span::styled(
-                        format!("{}: {}", entry.role.label(), line),
-                        style,
-                    )));
-                }
+            if entry.role == Role::Operator && !lines.is_empty() {
+                lines.push(Line::default());
+            }
+            let (label_style, text_style) = entry.role.styles();
+            let label = entry.role.label();
+            let used = if compact { label.len() + 2 } else { GUTTER };
+            let width = (history_inner.width as usize).saturating_sub(used);
+            for (index, line) in wrap(&entry.text, width).into_iter().enumerate() {
+                let gutter = match (entry.role, index) {
+                    (Role::Status, _) if compact => "· ".to_owned(),
+                    (Role::Status, _) => format!("{:>w$} ", "·", w = GUTTER - 1),
+                    _ if compact => format!("{label}: "),
+                    (_, 0) => format!("{label:>w$} │ ", w = GUTTER - 3),
+                    _ => format!("{:>w$} │ ", "", w = GUTTER - 3),
+                };
+                lines.push(Line::from(vec![
+                    Span::styled(gutter, label_style),
+                    Span::styled(line, text_style),
+                ]));
             }
         }
         if self.history.is_empty() {
             lines.push(Line::from(
-                "No transcript restored. Enter is presentation DATA until native admission.",
+                "No conversation restored; the agent continues from its accepted Memory.",
             ));
         }
+        // Follow new output only at the end; otherwise keep the reader's position.
+        if self.history_scroll > 0 {
+            self.history_scroll += lines.len().saturating_sub(self.rendered_lines);
+        }
+        self.rendered_lines = lines.len();
         let max_scroll = lines.len().saturating_sub(history_inner.height as usize);
         self.history_scroll = self.history_scroll.min(max_scroll);
         let start = max_scroll - self.history_scroll;
@@ -401,13 +458,40 @@ impl TerminalUi {
         }
     }
 }
-fn visual_lines(text: &str, width: usize) -> Vec<String> {
-    let mut lines = prompt_lines(text, text.len(), width).0;
-    if lines.len() > 1 && lines.last().is_some_and(String::is_empty) && !text.ends_with('\n') {
-        lines.pop();
+
+/// Word-aware history wrapping; words wider than the line break by grapheme.
+fn wrap(text: &str, width: usize) -> Vec<String> {
+    let width = width.max(1);
+    let mut lines = Vec::new();
+    for paragraph in text.split('\n') {
+        let body = paragraph.trim_start_matches(' ');
+        let mut line = " ".repeat((paragraph.len() - body.len()).min(width - 1));
+        let mut col = line.len();
+        let mut fresh = true;
+        for word in body.split(' ') {
+            let w = word.width();
+            if !fresh && col > 0 && col + 1 + w > width {
+                lines.push(std::mem::take(&mut line));
+                col = 0;
+            } else if !fresh {
+                line.push(' ');
+                col += 1;
+            }
+            fresh = false;
+            for g in word.graphemes(true) {
+                if col > 0 && col + g.width() > width {
+                    lines.push(std::mem::take(&mut line));
+                    col = 0;
+                }
+                line.push_str(g);
+                col += g.width();
+            }
+        }
+        lines.push(line);
     }
     lines
 }
+
 fn prompt_lines(text: &str, cursor: usize, width: usize) -> (Vec<String>, usize, usize) {
     let width = width.max(1);
     let mut lines = vec![String::new()];
@@ -442,5 +526,6 @@ fn prompt_lines(text: &str, cursor: usize, width: usize) -> (Vec<String>, usize,
     }
     (lines, caret.0, caret.1)
 }
+
 #[cfg(test)]
 mod tests;

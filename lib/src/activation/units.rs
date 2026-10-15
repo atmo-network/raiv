@@ -12,6 +12,7 @@ pub enum UnitError {
     WrongInput,
     Exhausted,
 }
+
 impl fmt::Display for UnitError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -20,6 +21,7 @@ impl fmt::Display for UnitError {
         })
     }
 }
+
 impl core::error::Error for UnitError {}
 
 /// One checked packet's host-profile unit capacities. A reservation is an authorized
@@ -39,6 +41,7 @@ pub struct UnitBudget {
     episode: u64,
     reserved: u64,
 }
+
 impl UnitBudget {
     pub fn from_input(input: &ValidatedInput<'_>) -> Self {
         let grant = input.input().budget_admission();
@@ -50,21 +53,27 @@ impl UnitBudget {
             reserved: 0,
         }
     }
+
     pub fn binding(&self) -> InputBinding {
         self.binding
     }
+
     pub fn admission_id(&self) -> Id32 {
         self.admission_id
     }
+
     pub fn reserved_units(&self) -> u64 {
         self.reserved
     }
+
     pub fn remaining_activation_units(&self) -> u64 {
         self.activation - self.reserved
     }
+
     pub fn remaining_episode_units(&self) -> u64 {
         self.episode - self.reserved
     }
+
     pub(crate) fn check(&self, binding: InputBinding, quote: u64) -> Result<(), UnitError> {
         if self.binding != binding {
             return Err(UnitError::WrongInput);
@@ -77,6 +86,7 @@ impl UnitBudget {
         }
         Ok(())
     }
+
     pub(crate) fn commit(&mut self, quote: u64) {
         // Only a successful immutable check followed by count/nonce admission reaches this.
         // No external callback or ledger mutation occurs between check and commit.

@@ -1,6 +1,7 @@
 use super::*;
 use crate::tests::activation::{admission, output};
 use ciborium::value::Value;
+
 fn limits() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -8,6 +9,7 @@ fn limits() -> ManifestLimits {
         max_admissions: 10,
     }
 }
+
 fn captured() -> CheckpointManifest {
     let module = output::invalid_output_module();
     let registry = admission::registry(&module);
@@ -18,15 +20,18 @@ fn captured() -> CheckpointManifest {
     book.admit_actor_wake(registered, input, grant).unwrap();
     CheckpointManifest::capture(registered, &book, &limits()).unwrap()
 }
+
 fn bytes(value: &Value) -> Vec<u8> {
     let mut out = Vec::new();
     ciborium::ser::into_writer(value, &mut out).unwrap();
     out
 }
+
 fn array(value: &mut Value) -> &mut Vec<Value> {
     let Value::Array(a) = value else { panic!() };
     a
 }
+
 #[test]
 fn exact_closed_roundtrip_independent_oracle_full_u64_and_explicit_caps() {
     let mut data = captured();
@@ -60,6 +65,7 @@ fn exact_closed_roundtrip_independent_oracle_full_u64_and_explicit_caps() {
         assert!(CheckpointManifest::decode(&encoded, &caps).is_err());
     }
 }
+
 #[test]
 fn version_shape_cid_order_status_null_counters_and_binding_mutations_are_not_accepted() {
     let encoded = captured().encode(&limits()).unwrap();
@@ -109,6 +115,7 @@ fn version_shape_cid_order_status_null_counters_and_binding_mutations_are_not_ac
     trailing.push(0);
     assert!(CheckpointManifest::decode(&trailing, &limits()).is_err());
 }
+
 #[cfg(target_os = "linux")]
 #[test]
 fn indexed_genesis_restoration_missing_extras_and_foreign_registry_metadata_never_approve_or_install(

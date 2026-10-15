@@ -2,6 +2,7 @@
 
 mod arguments;
 mod patch;
+
 pub use arguments::{PatchArguments, SkippedPlane};
 pub use patch::PatchError;
 
@@ -18,11 +19,13 @@ pub enum MemoryError {
     UnsupportedVersion,
     InvalidSchema,
 }
+
 impl From<CodecError> for MemoryError {
     fn from(error: CodecError) -> Self {
         Self::Codec(error)
     }
 }
+
 impl fmt::Display for MemoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -35,6 +38,7 @@ impl fmt::Display for MemoryError {
         }
     }
 }
+
 impl core::error::Error for MemoryError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
@@ -53,6 +57,7 @@ pub struct Memory {
     block: ModelValue,
     value_span: Range<usize>,
 }
+
 impl Memory {
     /// Encode an already normalized sparse semantic object. Empty planes/fields
     /// are rejected, not silently removed from authored persistent state.
@@ -69,19 +74,28 @@ impl Memory {
         let value_span = schema(block.as_bytes())?;
         Ok(Self { block, value_span })
     }
+
     pub fn decode(bytes: &[u8], limits: &DecodeLimits) -> Result<Self, MemoryError> {
         validate_drisl(bytes, limits)?;
         let value_span = schema(bytes)?;
         let block = ModelValue::decode(bytes, limits)?;
         Ok(Self { block, value_span })
     }
+
     pub fn as_bytes(&self) -> &[u8] {
         self.block.as_bytes()
     }
+
     /// Complete compact sparse value, without the structural record envelope.
     pub fn value_bytes(&self) -> &[u8] {
         &self.block.as_bytes()[self.value_span.clone()]
     }
+
+    /// Compact JSON of the sparse value, e.g. `{"intents":{"goal":"ship"}}`.
+    pub fn json(&self) -> crate::format::Json<'_> {
+        crate::format::Json(self.value_bytes())
+    }
+
     pub fn cid(&self) -> DaslCid {
         DaslCid::for_block(DaslCodec::Drisl, self.as_bytes())
     }
@@ -136,6 +150,7 @@ fn schema(bytes: &[u8]) -> Result<Range<usize>, MemoryError> {
     }
     Ok(value.span())
 }
+
 pub(super) fn push<T>(stack: &mut Vec<T>, value: T) -> Result<(), CodecError> {
     stack
         .try_reserve(1)

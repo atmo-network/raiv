@@ -4,7 +4,9 @@ use std::{
     os::unix::fs::{symlink, MetadataExt},
     path::PathBuf,
 };
+
 pub(crate) struct Directory(pub PathBuf);
+
 impl Directory {
     pub(crate) fn new() -> Self {
         let nonce = NEXT_TEMP.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -14,14 +16,17 @@ impl Directory {
         Self(path)
     }
 }
+
 impl Drop for Directory {
     fn drop(&mut self) {
         fs::remove_dir_all(&self.0).unwrap();
     }
 }
+
 fn cid(body: &[u8]) -> DaslCid {
     DaslCid::for_block(raiv::format::DaslCodec::Drisl, body)
 }
+
 #[test]
 fn exact_bytes_reopen_inode_reuse_lock_and_ignored_orphan_staging() {
     let directory = Directory::new();
@@ -44,6 +49,7 @@ fn exact_bytes_reopen_inode_reuse_lock_and_ignored_orphan_staging() {
     let reopened = DiskBlockStore::open_existing(&directory.0, DecodeLimits::default()).unwrap();
     assert_eq!(reopened.load(cid).unwrap(), body);
 }
+
 #[test]
 fn validation_before_publication_and_corrupt_existing_file_is_never_overwritten() {
     let directory = Directory::new();
@@ -76,6 +82,7 @@ fn validation_before_publication_and_corrupt_existing_file_is_never_overwritten(
     fs::write(&path, []).unwrap();
     assert!(disk.load(good).is_err());
 }
+
 #[test]
 fn symlinks_nonregular_paths_and_renamed_directory_never_redirect_reads_or_overwrite() {
     let directory = Directory::new();
@@ -106,6 +113,7 @@ fn symlinks_nonregular_paths_and_renamed_directory_never_redirect_reads_or_overw
     assert!(!directory.0.join(&name).exists());
     drop(disk);
 }
+
 #[test]
 fn tighter_wire_bounds_reject_existing_bytes_without_rewrite() {
     let directory = Directory::new();

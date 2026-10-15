@@ -10,6 +10,7 @@ mod tool_bindings;
 mod transitions;
 #[path = "usage_tests.rs"]
 mod usage;
+
 use crate::boundary::{Boundary, Exit};
 use sha2::{Digest, Sha256};
 
@@ -19,14 +20,17 @@ fn identity_graphs() -> Value {
     ))
     .unwrap()
 }
+
 fn root_of(fixture: &Value) -> DaslCid {
     fixture["root"].as_str().unwrap().parse().unwrap()
 }
+
 fn identities(blocks: &Store, root: DaslCid) -> Result<(), GraphError> {
     InspectedClosure::inspect(root, blocks, &Limits::default())
         .unwrap()
         .check_identities()
 }
+
 fn boundary_change(
     fixture: &Value,
     index: usize,

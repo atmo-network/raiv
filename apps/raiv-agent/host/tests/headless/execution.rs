@@ -1,4 +1,5 @@
 //! Separate CLI settlement is synthetic ledger atomicity, never genuine tool/backend semantics.
+
 use super::wake::{fields, frame, grant, input, script, wake};
 use super::*;
 use raiv::{
@@ -18,6 +19,7 @@ use raiv_agent_host::{
     },
     VmLimits,
 };
+
 fn bounds() -> LocalExecutorLimits {
     LocalExecutorLimits {
         executor: ExecutorLimits {
@@ -32,6 +34,7 @@ fn bounds() -> LocalExecutorLimits {
         caller: Limits::default(),
     }
 }
+
 pub(super) fn command_binding(dir: &Path) -> ([u8; 32], [u8; 32], String) {
     let b = bounds();
     let mut disk = DiskBlockStore::open_existing(dir, b.executor.wire).unwrap();
@@ -50,6 +53,7 @@ pub(super) fn command_binding(dir: &Path) -> ([u8; 32], [u8; 32], String) {
         source.root().to_string(),
     )
 }
+
 pub(super) fn plan(
     action: [u8; 32],
     digest: [u8; 32],
@@ -59,6 +63,7 @@ pub(super) fn plan(
 ) -> String {
     format!("action_id=\"{}\"\ncommand_digest=\"{}\"\noutcome=\"{outcome}\"\ndebit=\"{debit}\"\nresult_hex=\"{result}\"\n",hex(&action),hex(&digest))
 }
+
 pub(super) fn execute(home: &Path, pin: &str) -> Output {
     Command::new(env!("CARGO_BIN_EXE_raiv-agent"))
         .args(["execute-pending", "--plan"])
@@ -72,6 +77,7 @@ pub(super) fn execute(home: &Path, pin: &str) -> Output {
         .output()
         .unwrap()
 }
+
 fn leave_submitted(module: &[u8], dir: &Path, world_dir: &Path, digest: [u8; 32]) {
     let b = bounds();
     let mut disk = DiskBlockStore::open_existing(dir, b.caller.decode_limits()).unwrap();
@@ -113,6 +119,7 @@ fn leave_submitted(module: &[u8], dir: &Path, world_dir: &Path, digest: [u8; 32]
     let ticket = world.authorize_pending(reg, &book, &mut disk, &b).unwrap();
     world.begin(ticket, reg, &book, &mut disk, &b).unwrap();
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_execute_pending_debits_once_known_zero_releases_conflicts_and_submitted_do_not_reexecute() {

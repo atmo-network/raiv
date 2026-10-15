@@ -1,8 +1,12 @@
 //! Never resume a VM or an Attempted/Launched record without lost-attempt policy.
+
 use super::*;
+
 #[cfg(test)]
 mod tests;
+
 use raiv::{input::ActivationInput, preparation::PreparedInput};
+
 /// Reissue one new process-local capability only for a pinned, adopted, unissued
 /// Reserved/zero-attempt record. Original IDs/grant/observation/exact digest survive.
 /// All data/allocation/durability checks precede the one nonfallible issuance mark.

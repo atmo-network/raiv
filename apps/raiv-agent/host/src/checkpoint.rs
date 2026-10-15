@@ -1,4 +1,5 @@
 //! Typed local checkpoint MANIFEST DATA. No authority, token recreation or dispatch.
+
 use crate::{
     admission::{AdmissionBook, AdmissionRecord, AdmissionStatus},
     registry::{Anchor, RegisteredAgent},
@@ -10,15 +11,18 @@ use raiv::{
     graph::RestoredAgent,
 };
 use std::fmt;
+
 #[cfg(test)]
 mod tests;
 mod wire;
+
 #[derive(Clone, Copy, Debug)]
 pub struct ManifestLimits {
     pub wire: DecodeLimits,
     pub max_blocks: u64,
     pub max_admissions: u64,
 }
+
 #[derive(Debug)]
 pub enum CheckpointError {
     Codec(CodecError),
@@ -31,6 +35,7 @@ pub enum CheckpointError {
     #[cfg(target_os = "linux")]
     Disk(crate::disk::DiskError),
 }
+
 impl fmt::Display for CheckpointError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -46,7 +51,9 @@ impl fmt::Display for CheckpointError {
         })
     }
 }
+
 impl std::error::Error for CheckpointError {}
+
 /// One local agent's exact metadata. The program/resource/policy/grant fields remain
 /// DATA on decoding; importing a file cannot approve them or restore native capabilities.
 /// No observations/context/replies/transcripts or core block bodies are duplicated here.
@@ -57,6 +64,7 @@ pub struct CheckpointManifest {
     required: Vec<DaslCid>,
     admissions: Vec<AdmissionRecord>,
 }
+
 impl CheckpointManifest {
     pub fn capture(
         registered: &RegisteredAgent,
@@ -89,6 +97,7 @@ impl CheckpointManifest {
         data.check_snapshot(registered.snapshot())?;
         Ok(data)
     }
+
     #[cfg(target_os = "linux")]
     pub(crate) fn next(
         &self,
@@ -137,6 +146,7 @@ impl CheckpointManifest {
         data.check_snapshot(snapshot)?;
         Ok(data)
     }
+
     #[cfg(target_os = "linux")]
     pub(crate) fn admission_stage(
         &self,
@@ -184,6 +194,7 @@ impl CheckpointManifest {
         data.check(limits)?;
         Ok(data)
     }
+
     fn index(
         snapshot: &RestoredAgent,
         limits: &ManifestLimits,
@@ -201,31 +212,39 @@ impl CheckpointManifest {
         required.sort_unstable_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
         Ok(required)
     }
+
     pub fn anchor(&self) -> Anchor {
         self.anchor
     }
+
     pub fn program_binding(&self) -> ProgramBinding {
         self.program
     }
+
     pub fn resources(&self) -> VmLimits {
         self.resources
     }
+
     pub fn required_cids(&self) -> &[DaslCid] {
         &self.required
     }
+
     pub fn admissions(&self) -> &[AdmissionRecord] {
         &self.admissions
     }
+
     pub fn encode(&self, limits: &ManifestLimits) -> Result<Vec<u8>, CheckpointError> {
         self.check(limits)?;
         wire::encode(self, limits)
     }
+
     pub fn decode(bytes: &[u8], limits: &ManifestLimits) -> Result<Self, CheckpointError> {
         validate_drisl(bytes, &limits.wire).map_err(CheckpointError::Codec)?;
         let data = wire::decode(bytes, limits)?;
         data.check(limits)?;
         Ok(data)
     }
+
     fn check(&self, limits: &ManifestLimits) -> Result<(), CheckpointError> {
         if self.required.len() as u64 > limits.max_blocks
             || self.admissions.len() as u64 > limits.max_admissions
@@ -319,6 +338,7 @@ impl CheckpointManifest {
         }
         Ok(())
     }
+
     fn check_snapshot(&self, snapshot: &RestoredAgent) -> Result<(), CheckpointError> {
         if snapshot.root() != self.anchor.root
             || snapshot.state().agent_id() != self.anchor.agent_id
@@ -377,6 +397,7 @@ impl CheckpointManifest {
         }
         Ok(())
     }
+
     /// Explicit indexed I/O followed by pure Core restoration. No approval/HEAD install.
     #[cfg(target_os = "linux")]
     pub fn restore(

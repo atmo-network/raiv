@@ -10,6 +10,7 @@ use crate::{
 };
 
 use raiv::{boundary::Exit, format::DecodeLimits, limits::Limits, receipt::Outcome};
+
 fn caps() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -17,6 +18,7 @@ fn caps() -> ManifestLimits {
         max_admissions: 10,
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn only_committed_pending_command_enters_simulator_and_ram_only_anchor_cannot_substitute_disk_commit(
@@ -103,6 +105,7 @@ fn only_committed_pending_command_enters_simulator_and_ram_only_anchor_cannot_su
     ));
     assert!(executor.is_empty());
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn committed_slot_one_intent_terminal_receipt_routes_action_result_and_new_slot_without_replaying_prior_intent(
@@ -732,6 +735,7 @@ fn local_caps() -> crate::simulator::local::LocalExecutorLimits {
         caller: Limits::default(),
     }
 }
+
 fn provision_empty_data(
     registered: &crate::registry::RegisteredAgent,
     admissions: &AdmissionBook,
@@ -754,6 +758,7 @@ fn provision_empty_data(
     assert_eq!(present.as_bytes(), empty.as_bytes());
     file.replace(Some(&present), &empty).unwrap();
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn local_intent_requires_recorded_ready_fsyncs_submitted_before_command_and_blocks_repeat_without_reading_file(
@@ -884,6 +889,7 @@ fn local_intent_requires_recorded_ready_fsyncs_submitted_before_command_and_bloc
     ));
     assert_eq!(executor.record(ticket).unwrap().submission_intents, 1);
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn unknown_ready_can_ack_without_intent_but_unknown_submitted_exposes_no_command_and_identical_file_blocks_fresh_book_replay(
@@ -993,6 +999,7 @@ fn unknown_ready_can_ack_without_intent_but_unknown_submitted_exposes_no_command
     assert_eq!(fresh.record(other).unwrap().submission_intents, 0);
     assert_eq!(executor.record(ticket).unwrap().submission_intents, 1);
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn local_intent_foreign_policy_capacity_and_disk_refusals_publish_no_intent_or_frame_then_repair_allows_one_submission(
@@ -1271,6 +1278,7 @@ fn local_terminal_data_all_outcomes_are_fsynced_before_ram_known_duplicate_and_c
         assert_eq!(disk.manifest(caps().wire).read().unwrap().unwrap(), main);
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn unknown_terminal_preserves_submitted_until_identical_ack_conflicting_receipt_foreign_ticket_and_corrupt_known_file_refuse(
@@ -1559,6 +1567,7 @@ fn paired_pin_reopen_adopts_ready_submitted_terminal_into_new_origins_without_to
         assert_eq!(registered.anchor(), pin.source.anchor);
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn executor_adoption_digest_source_policy_capacity_and_missing_corrupt_dependencies_refuse_atomically_without_repair(

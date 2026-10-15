@@ -3,6 +3,7 @@
 
 mod context;
 mod encoding;
+
 pub use context::InitialProjection;
 pub use encoding::ProjectionError;
 
@@ -20,6 +21,7 @@ use crate::{
 pub struct HistoryProjection<'a> {
     restored: &'a RestoredAgent,
 }
+
 impl<'a> HistoryProjection<'a> {
     pub fn new(restored: &'a RestoredAgent) -> Self {
         Self { restored }
@@ -55,13 +57,16 @@ pub struct EpisodeProjection<'a> {
     restored: &'a RestoredAgent,
     episode: &'a Episode,
 }
+
 impl<'a> EpisodeProjection<'a> {
     pub fn id(self) -> Id32 {
         self.episode.id()
     }
+
     pub fn closed(self) -> bool {
         self.episode.closed()
     }
+
     pub fn entry_memory(self) -> Option<&'a Memory> {
         self.episode.entry_memory_link().map(|cid| {
             self.restored
@@ -69,6 +74,7 @@ impl<'a> EpisodeProjection<'a> {
                 .expect("restored entry Memory")
         })
     }
+
     /// Final memory for a completed Episode; latest checkpoint memory for an open one.
     /// A memory-disabled profile returns None, never synthetic empty planes.
     pub fn latest_memory(self) -> Option<&'a Memory> {
@@ -87,6 +93,7 @@ impl<'a> EpisodeProjection<'a> {
                     .expect("restored Boundary Memory")
             })
     }
+
     pub fn actions(self) -> impl Iterator<Item = ActionProjection<'a>> {
         let mut boundaries = self.episode.boundaries().peekable();
         core::iter::from_fn(move || loop {
@@ -120,11 +127,13 @@ pub struct ActionProjection<'a> {
     command: &'a [u8],
     receipt: Option<&'a [u8]>,
 }
+
 impl<'a> ActionProjection<'a> {
     /// Borrow schema-owned typed fields without copying or revalidating the retained payload.
     pub fn command(self) -> CommandView<'a> {
         CommandView::from_validated(self.command)
     }
+
     pub fn receipt(self) -> Option<ReceiptView<'a>> {
         self.receipt.map(ReceiptView::from_validated)
     }
@@ -132,6 +141,7 @@ impl<'a> ActionProjection<'a> {
     pub fn command_bytes(self) -> &'a [u8] {
         self.command
     }
+
     pub fn receipt_bytes(self) -> Option<&'a [u8]> {
         self.receipt
     }

@@ -1,4 +1,5 @@
 //! Native process-local live routing; pins/data are not fresh admission or acceptance.
+
 use super::*;
 use crate::{
     output::Output,
@@ -11,6 +12,7 @@ use raiv::{
     limits::Limits,
     preparation::{InputBinding, PreparedInput},
 };
+
 pub(super) fn source() -> RestoredAgent {
     let bytes = encode(&genesis(1));
     let Output::Initialized { root, blocks } = Output::decode(&bytes, &Limits::default()).unwrap()
@@ -19,6 +21,7 @@ pub(super) fn source() -> RestoredAgent {
     };
     RestoredAgent::restore(root, &blocks, &Limits::default()).unwrap()
 }
+
 pub(super) fn prepared(source: &RestoredAgent) -> PreparedInput {
     let input = ActivationInput::decode(&encode(&packet()), &Limits::default()).unwrap();
     PreparedInput::new(
@@ -34,6 +37,7 @@ pub(super) fn prepared(source: &RestoredAgent) -> PreparedInput {
     )
     .unwrap()
 }
+
 pub(super) fn pin(wasm: &[u8], source: &RestoredAgent) -> ProgramBinding {
     ProgramBinding {
         module_digest: DaslCid::for_block(DaslCodec::Raw, wasm).digest(),
@@ -41,6 +45,7 @@ pub(super) fn pin(wasm: &[u8], source: &RestoredAgent) -> ProgramBinding {
         execution_domain: source.definition().execution_domain(),
     }
 }
+
 pub(super) fn normalized(id: u64, tool: &str, args: Value) -> Vec<u8> {
     let wire = decode(&progression::reply(
         id,
@@ -53,6 +58,7 @@ pub(super) fn normalized(id: u64, tool: &str, args: Value) -> Vec<u8> {
     ));
     encode(field(field(&wire, "payload"), "reply"))
 }
+
 #[test]
 fn program_and_source_packet_substitution_fail_before_wasm_instantiation() {
     let source = source();
@@ -111,6 +117,7 @@ fn program_and_source_packet_substitution_fail_before_wasm_instantiation() {
         Err(RunError::Bridge(_))
     ));
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_runs_with_same_guest_request_id_refuse_cross_instance_stale_duplicate_and_malformed_replies(
@@ -234,6 +241,7 @@ fn real_runs_with_same_guest_request_id_refuse_cross_instance_stale_duplicate_an
         })
     ));
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_routing_yield_candidate_is_data_only_and_transport_exhaustion_has_no_candidate() {

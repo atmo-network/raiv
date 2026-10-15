@@ -1,12 +1,34 @@
 # Reference agent boundary
 
-The [guest](guest/README.md) owns behavior; the [native host](host/README.md) owns external capabilities. Linux `raiv-agent` supports offline init/status, explicit independent-world provisioning/inspection, one-boundary wake, separate synthetic pending execution, ledger-bound resume and the bounded **retry-and-sleep runner** below. Actual Wasmi/local acceptance/fresh pinned adoption are runnable; the unit-world is not an authentic market/wake backend. New live-profile init/status/world provisioning is supported without credentials or HTTP; bounded native HTTPS wake/resume is wired. The native interactive command is wired with finite operator approvals and two regions; real-provider compatibility, external authentication and availability remain in [BACKLOG.md](../../BACKLOG.md). See the [specification](../../docs/raiv.spec.en.md) and [applications index](../README.md).
+The [guest](guest/README.md) owns behavior; the [native host](host/README.md) owns external capabilities. Linux `raiv-agent` supports offline init/status, explicit independent-world provisioning/inspection, one-boundary wake, separate synthetic pending execution, ledger-bound resume and the bounded **retry-and-sleep runner** below. Actual Wasmi/local acceptance/fresh pinned adoption are runnable; the unit-world is not an authentic market/wake backend. New live-profile init/status/world provisioning is supported without credentials or HTTP; bounded native HTTPS wake/resume is wired. The native interactive command is wired with finite operator approvals and two regions; real-provider compatibility, external authentication and availability remain in [BACKLOG.md](../../BACKLOG.md). See the [specification](../../docs/raiv.spec.en.md).
 
 - Core and guest: Rust **1.85**, `no_std + alloc`.
 - Native host: Rust **1.86**, pinned **Wasmi 2.0.0**, std only here.
 - Root default Cargo commands select Core; select application packages explicitly.
 - No imports/WASI, host-built model context, transcript restoration or real effects. Native stores expose bounded immutable DATA; only explicit Registry/admission/conditional local acceptance owns trusted publication. Input/Reserved precede Attempted/Launched; uncertain attempted or submitted work never permits automatic relaunch/refund. Recovery uses separately selected exact pins, fresh origins and no serialized capability. The [host contract](host/README.md) defines these ports and uncertainty boundaries.
 - ScriptedWorld owns only a separate atomic virtual-unit reservation/debit + immutable Receipt ledger. Paired adoption preserves rows/balances without reset; only its installed terminal ledger can admit ActionResult. Genuine funding/pricing, authenticated authority, independent durable pin retention/currentness, after-Core-loss reconciliation and real tool semantics remain unproven.
+
+## Quick start
+
+```bash
+rustup target add wasm32v1-none && cargo fetch --locked
+export OPENCODE_API_KEY=...      # default provider: OpenCode Go, deepseek-v4.1-flash/high
+./run.sh                         # review, type `run`, chat; Esc exits after the current reply
+./run.sh --status                # what the agent remembers (memory=...), no key needed
+```
+
+A **new** session can use the generic OpenAI-compatible profile instead. By default it runs `qwen3.8-flash` on the same OpenCode endpoint with `OPENCODE_API_KEY`; `RAIV_BASE_URL`, `RAIV_MODEL` and `RAIV_API_KEY_ENV` (a variable name) select another compatible endpoint:
+
+```bash
+RAIV_PROVIDER=openai-compatible ./run.sh var/raiv/qwen
+```
+
+A session keeps its provider, model, guest and plan; to change them, start a new session directory. Offline checks need no key or network:
+
+```bash
+bash apps/raiv-agent/test-run.sh --native   # launcher regressions plus actual-Wasmi startup (after ./run.sh --build)
+RAIV_GUEST_WASM=$PWD/target/wasm32v1-none/release/raiv_agent.wasm sh apps/raiv-agent/test-host.sh
+```
 
 ## Simple Bash launcher
 
@@ -23,7 +45,9 @@ export OPENCODE_API_KEY
 
 The launcher copies the exact built guest into a private new session, creates random agent/world IDs and a fixed Survivor/Go/deepseek-v4.1-flash/high configuration with a general local-assistant mandate. It initializes only a newly created empty revision-zero namespace. Review the displayed config/module hashes, root/revision/manifest, world and finite plan, then type `run` to approve that exact local source. For a fresh session this also approves the displayed new empty synthetic world bootstrap; only its successful native genesis result supplies the world pin. For an existing session the exact inspected world digest is displayed before approval. Hashes/status alone never approve adoption; the explicit confirmation is the native operator selection. Enter in the TUI separately approves each prompt. No provider request occurs merely from startup.
 
-Defaults are **2 prompts/invocation, ≤3 model calls/prompt (≤6 total), 1024 output tokens and20s/request, actions0**, with synthetic100 activation/episode units per event. They are not genuine billing or cumulative/lifetime funding. Inference remains synchronous; Esc is deferred until its bounded decision. Configuration, guest, grants, blocks and independent world live under the NEW `var/raiv/chat` default (private/gitignored, outside `target/`). Earlier `var/raiv/default` data is preserved, never migrated or rebound. Reopening keeps accepted Memory and uses a fresh UI/VM with explicitly selected current pins; no transcript is restored. Existing config/guest/grant changes, unresolved admissions, pending actions and incomplete bootstrap refuse without overwriting, repairing, dispatching or retrying anything. A declined fresh bootstrap retains its main baseline without a world; later launches conservatively refuse that incomplete session rather than infer permission to provision it.
+New sessions default to **20 prompts/launch, ≤3 model calls/prompt, 4096 output tokens and 60s/request, actions 0**, with synthetic 100 activation/episode units per event. The default mandate asks the agent to save lasting facts, preferences and goals with patch_memory and not to offer unavailable actions. They are not genuine billing or cumulative/lifetime funding. Inference remains synchronous; Esc is deferred until its bounded decision. Configuration, guest, grants, blocks and independent world live under the NEW `var/raiv/chat` default (private/gitignored, outside `target/`). Earlier `var/raiv/default` data is preserved, never migrated or rebound. Reopening keeps accepted Memory and uses a fresh UI/VM with explicitly selected current pins; no transcript is restored. Each session keeps its own pinned guest and grant plan: a newer build or changed launcher defaults never rebind or orphan it. The launcher runs the session's own `guest.wasm`, notes when the current build differs, and displays the session's own plan for approval. Config changes, unresolved admissions, pending actions and incomplete bootstrap refuse without overwriting, repairing, dispatching or retrying anything.
+
+The two-region TUI labels turns (You / Agent / Memory) in a gutter, wraps at words and keeps a scrolled-back reader in place while new output arrives. Startup shows the restored checkpoint and the agent's accepted Memory as compact JSON; each accepted boundary adds one checkpoint line (revision, short root, model calls, prompts left) and, when Memory changed, the new Memory. `./run.sh --status` prints the same Memory as a `memory=` line. None of this restores or archives conversation text. A declined fresh bootstrap retains its main baseline without a world; later launches conservatively refuse that incomplete session rather than infer permission to provision it.
 
 ```bash
 ./run.sh --status                    # Read-only DATA inspection; no key, TTY or approval needed
@@ -36,20 +60,20 @@ bash apps/raiv-agent/test-run.sh --native  # After --build: actual Wasmi startup
 
 Interactive refusal now shows a closed native category when available: typed provider errors (including numeric HTTP status and preserved SSE framing/normalization/completeness subtypes), request mapping, reply mode, guest routing or reasoning continuation. Provider-declared length and refusal/filter markers remain failures with distinct static labels, never salvaged Finish. Arbitrary error chains, provider bodies/headers, reasoning and arguments are never formatted; unknown errors remain withheld. These RAM-only labels are observations, not retry/refund permission or persisted outcome recovery. Read-only status can establish admission/acceptance state but cannot reconstruct a previously discarded error. The owner-approved1024 envelope now has a bounded nonempty real-provider response through the production driver. The earlier256-token failures stay unresolved in their original namespaces; history/provenance belongs in [CHANGELOG](../../CHANGELOG.md), not implicit retry/migration permission.
 
-Offline launcher validation uses an owned PTY and strips credentials from the host. The general-mandate1024 profile also has ordinary Bash-launcher/real-inference/owned-PTY Memory continuity evidence: accepted patch, then a fresh process/UI/VM on the independently checked known source copies the saved value with no nickname in the second prompt, without effect replay. This bounded witness and the production-driver textual acceptance are distinct from the older task-specific live witness below; neither proves general model compliance or physical-terminal/async behavior. Advanced init/world/pin/grant/wake/resume commands stay available below; Core/guest/host contracts and fixtures are unchanged.
+Offline launcher validation uses an owned PTY and strips credentials from the host. The earlier general-mandate 1024-token profile also has ordinary Bash-launcher/real-inference/owned-PTY Memory continuity evidence: accepted patch, then a fresh process/UI/VM on the independently checked known source copies the saved value with no nickname in the second prompt, without effect replay. This bounded witness and the production-driver textual acceptance are distinct from the older task-specific live witness below; neither proves general model compliance or physical-terminal/async behavior. Advanced init/world/pin/grant/wake/resume commands stay available below; Core/guest/host contracts and fixtures are unchanged.
 
 ### Opt-in ordinary-launcher witness
 
-[`test-live-launcher.py`](test-live-launcher.py) uses Python only as test-side stdlib PTY and independent fixture-codec plumbing; ordinary `run.sh` remains Bash. It launches the actual script in a private retained `var/raiv/launcher-witness-*` namespace with the unmodified general mandate,1024tokens/20s, at most3calls/event and6total across two fresh UI/VM processes. It checks exact semantic Memory, independent preferred-CBOR/CID bytes, unique native event/admission IDs, closed Episodes/Consumed rows and unchanged world. Raw terminal/model text stays bounded RAM-only; a small CSI screen reducer handles differential rendering instead of confusing partial writes with full lines. Normalized provider reasoning is never exposed by the UI or persisted by the witness.
+[`test-live-launcher.sh`](test-live-launcher.sh) drives the ordinary `run.sh` in an owned PTY (`script`, 120×30) inside a new retained `var/raiv/launcher-witness-*` session with the default provider, mandate and plan. Stage 1 asks the agent to save a nickname; stage 2, in a fresh UI/VM process, asks it to copy the saved value without repeating it. After each stage it checks the exact `memory=` JSON from `status`, consumed admissions, no unresolved admission and an unchanged world. Raw terminal output stays in a private temporary directory that is removed on exit; credentials never reach status commands or logs.
 
 ```bash
-python3 apps/raiv-agent/test-live-launcher.py --check-offline  # No credential/process/network
-# Explicit native local-test approval of NEW source/events and this finite inference envelope:
-RAIV_LIVE_SMOKE=opencode-go/deepseek-v4.1-flash/launcher-memory-1024 \
-  python3 apps/raiv-agent/test-live-launcher.py
+bash apps/raiv-agent/test-live-launcher.sh --check-offline   # no credential, process or network
+# Spends real inference (about four model calls):
+RAIV_LIVE_SMOKE=opencode-go/deepseek-v4.1-flash/launcher-memory-4096 \
+  bash apps/raiv-agent/test-live-launcher.sh
 ```
 
-`--continue-accepted <owned-session>` is only for an independently verified exact revision1/Consumed/expected-Memory test source whose first operation is already known accepted; it submits ONLY the new second prompt after checking the exact previous manifest. It cannot replay the first input, adopt unresolved state, clear data or manufacture success. Test failure/unknown state stops with retained files; never repeat automatically. The completed witness includes one test-observer correction after first acceptance, recorded in CHANGELOG, not a passing assertion of normal first-process exit or first-screen text capture. The second fresh process showed nonempty Agent text and exited by fenced Esc/process0. Python≥3.11 is a test-only requirement, not an ordinary launcher/runtime dependency.
+`--continue-accepted <owned-session>` resumes only an owned witness session whose stage 1 is already verified accepted; it submits only the second prompt. A refusal or unknown outcome stops with the session retained for inspection; nothing is retried, refunded or replayed.
 
 ## Build and execute the real Rust guest
 
@@ -64,7 +88,7 @@ cargo +1.86.0 clippy --locked -p raiv-agent-host --all-targets -- -D warnings
 cargo +1.85.0 clippy --locked -p raiv-agent-guest --target wasm32v1-none -- -D warnings
 ```
 
-Module-dependent runtime tests are deliberately ignored by ordinary host tests because they require the compiled module. The separate owned-PTY terminal lifecycle witness is also ignored and explicitly excluded from the module selection; run it only inside an owned PTY, e.g. script -q -e -c 'cargo +1.86.0 test --locked -p raiv-agent-host --lib terminal::tests::owned_tty_session_restores_termios_normal_drop_and_unwind_and_rejects_second_owner -- --exact --ignored --test-threads=1' /dev/null. It changes only its child PTY, tests termios restoration/second-owner refusal and proves no native inference/admission. Non-TTY tests never change the operator terminal. The bounded [test-host.sh](test-host.sh) runner executes ordinary native tests, then module tests with the process suite excluded, then isolated serialized process tests; it rejects a missing/unset guest module before running Cargo. Omit its toolchain argument for the current toolchain. A bare `--ignored` mixes module and process tests and is not the supported combined invocation. The [Rust boundary workflow](../../.github/workflows/rust-boundaries.yml) builds a guest per matrix pair (host1.86/guest1.85 and stable/stable), checks guest bare-metal/wasm features and executes this runner on a declared filesystem test directory; no live provider/IPFS/financial effects are enabled. They cover bootstrap, retained RAM reply progression, fixed Command/Finish candidate bytes and six independent golden roots, data recovery in fresh instances, stale/error correlation, buffer ownership and finite memory/fuel failure before and during a live run. Profile-specific parity is execution evidence, not W01–W11 completion or host acceptance.
+Module-dependent runtime tests are deliberately ignored by ordinary host tests because they require the compiled module. The separate owned-PTY terminal lifecycle witness is also ignored and explicitly excluded from the module selection; run it only inside an owned PTY, e.g. script -q -e -c 'cargo +1.86.0 test --locked -p raiv-agent-host --lib terminal::tests::owned_tty_session_restores_termios_normal_drop_and_unwind_and_rejects_second_owner -- --exact --ignored --test-threads=1' /dev/null. It changes only its child PTY, tests termios restoration/second-owner refusal and proves no native inference/admission. Non-TTY tests never change the operator terminal. The bounded [test-host.sh](test-host.sh) runner executes ordinary native tests, then module tests with the process suite excluded, then isolated serialized process tests; it rejects a missing/unset guest module before running Cargo. Omit its toolchain argument for the current toolchain. A bare `--ignored` mixes module and process tests and is not the supported combined invocation. The [Rust boundary workflow](../../.github/workflows/rust-boundaries.yml) builds a guest per matrix pair (host 1.86/guest 1.85 and stable/stable), checks guest bare-metal/wasm features and executes this runner on a declared filesystem test directory; no live provider/IPFS/financial effects are enabled. They cover bootstrap, retained RAM reply progression, fixed Command/Finish candidate bytes and six independent golden roots, data recovery in fresh instances, stale/error correlation, buffer ownership and finite memory/fuel failure before and during a live run. Profile-specific parity is execution evidence, not W01–W11 completion or host acceptance.
 
 ## Runnable retry-and-sleep demo
 
@@ -105,7 +129,7 @@ target/debug/raiv-agent init --config apps/raiv-agent/raiv-agent.local.toml
 target/debug/raiv-agent status --config apps/raiv-agent/raiv-agent.local.toml
 ```
 
-Configuration requires exact schema/state-format/selectors, profile, bytes32 agent ID and module digest; unknown/duplicate fields, profile aliases, live protocol fields and credential values reject in this scripted subset before bootstrap; the separate closed live bootstrap shape below is supported. Config is capped at16KiB and module bytes at8MiB. The directory must already be operator-owned. Init invokes the real import-free WASM guest, restores its exact selected genesis, approves it through Registry and writes the guarded local baseline. It refuses an existing manifest even if identical: never replace/repair/reseed an existing namespace by initialization.
+Configuration requires exact schema/state-format/selectors, profile, bytes32 agent ID and module digest; unknown/duplicate fields, profile aliases, live protocol fields and credential values reject in this scripted subset before bootstrap; the separate closed live bootstrap shape below is supported. Config is capped at 16KiB and module bytes at 8MiB. The directory must already be operator-owned. Init invokes the real import-free WASM guest, restores its exact selected genesis, approves it through Registry and writes the guarded local baseline. It refuses an existing manifest even if identical: never replace/repair/reseed an existing namespace by initialization.
 
 Status performs bounded manifest/indexed-closure inspection, checks configuration agreement and reports root/revision/profile/phase/current Episode/admission counts/readable local bytes. It instantiates no VM, infers nothing, approves no current pin and issues no admission or execution capability. Budget/lifetime spending is explicitly DATA-only/unproven; readiness is indexed local readability, not replication/funding/finality. A missing/corrupt manifest or block, profile/identity/module mismatch or nonempty uninitialized namespace is an error, never fallback genesis. Init/status never initialize a world implicitly. The scripted runner and selected live demo are documented separately; full W06/W11 remain open.
 
@@ -126,7 +150,7 @@ target/debug/raiv-agent init --config apps/raiv-agent/raiv-agent.online.local.to
 target/debug/raiv-agent status --config apps/raiv-agent/raiv-agent.online.local.toml
 ```
 
-The live shape requires explicit agent mandate and native inference protocol/base_url/model/api_key_env/stream plus positive integer max_tokens, request/response/header/timeout_ms/SSE event/count caps. Request/response are capped at8MiB; config remains16KiB. Only the selected NAME OPENCODE_API_KEY is accepted—no raw key field or value, credential lookup, TLS/request or catalogue lookup occurs during parsing/init/status. ProviderConfig.validate performs data-only protocol/HTTPS/model/bounds validation; guest-owned opencode_definition supplies exact new Definition metadata. The canonical protocol is openai-chat-completions; historical openai-responses remains an explicit Chat Completions alias, not actual Responses support. Omitting reasoning_effort selects the current disabled-thinking profile; tool/policy changes still require a new Definition. To select the new exact deepseek-v4.1-flash profile, add reasoning_effort = "low" or "high" within the existing [inference] table; off/max/other types, duplicate/unknown fields and enabled effort for another model refuse. This is a NEW Definition/module approval and fresh namespace, never a toggle on saved or uncertain state. All profiles retain synthetic one-unit quotes, not authenticated model billing. Historical bounded live high evidence belongs to its originally approved module/Definition; current natural-completion high has a separate fresh bounded live witness; low remains offline-validated only. Broad model compliance is not implied.
+The live shape requires explicit agent mandate and native inference protocol/base_url/model/api_key_env/stream plus positive integer max_tokens, request/response/header/timeout_ms/SSE event/count caps. Request/response are capped at 8MiB; config remains16KiB. Only the selected NAME OPENCODE_API_KEY is accepted—no raw key field or value, credential lookup, TLS/request or catalogue lookup occurs during parsing/init/status. ProviderConfig.validate performs data-only protocol/HTTPS/model/bounds validation; guest-owned opencode_definition supplies exact new Definition metadata. The canonical protocol is openai-chat-completions; historical openai-responses remains an explicit Chat Completions alias, not actual Responses support. Omitting reasoning_effort selects the current disabled-thinking profile; tool/policy changes still require a new Definition. To select the new exact deepseek-v4.1-flash profile, add reasoning_effort = "low" or "high" within the existing [inference] table; off/max/other types, duplicate/unknown fields and enabled effort for another model refuse. This is a NEW Definition/module approval and fresh namespace, never a toggle on saved or uncertain state. All profiles retain synthetic one-unit quotes, not authenticated model billing. Historical bounded live high evidence belongs to its originally approved module/Definition; current natural-completion high has a separate fresh bounded live witness; low remains offline-validated only. Broad model compliance is not implied.
 
 Init executes actual Wasmi, verifies the selected guest output and registers/publishes an empty guarded revision-zero baseline. Status reports mode=live-profile-data and does not adopt, approve currentness or create capability. Neither command repairs/reseeds/rebinds existing storage. Independent init-world/world-status work through the same native world owners and separately approved main source below; the world is still synthetic. Scripted wake/resume/run-scenario are explicitly rejected for a live config before attempts or fixture reads, so mocked replies cannot masquerade as selected external inference. The live wake/resume driver below is now wired; broader provider compatibility and operational interrupt/terminal evidence remain in [BACKLOG](../../BACKLOG.md). Bootstrap itself proves no external inference.
 
@@ -149,7 +173,7 @@ Offline native provider-port/JSON/SSE faults and actual-WASM fresh-adoption/Memo
 
 ## Interactive terminal (native local-test approval)
 
-After NEW live bootstrap/world provisioning and independent main/world source selection, copy/review the [finite interactive grant plan](raiv-agent.interactive-grants.toml). All five fields are canonical unsigned decimal text; max_events is1..1024, unit/model fields positive, actions may be zero. It approves a per-event envelope and per-invocation event count, not genuine pricing/lifetime funding/authenticated external Actor rights. Starting or reopening the command is explicit native operator approval; new process invocation does not establish cumulative funding.
+After NEW live bootstrap/world provisioning and independent main/world source selection, copy/review the [finite interactive grant plan](raiv-agent.interactive-grants.toml). All five fields are canonical unsigned decimal text; max_events is 1..1024, unit/model fields positive, actions may be zero. It approves a per-event envelope and per-invocation event count, not genuine pricing/lifetime funding/authenticated external Actor rights. Starting or reopening the command is explicit native operator approval; new process invocation does not establish cumulative funding.
 
 ```sh
 # Independently approve starting main/world pins, configured program/mandate and finite plan.
@@ -166,34 +190,13 @@ Offline actual-WASM controller patch/Finish, fresh approved/UI continuation, sam
 
 ## Go routing and live smoke
 
-OpenCode Go requires a native per-conversation routing header: **x-opencode-session**. The application now binds this once to the approved event ID before exposure and keeps it stable across every inference turn of that retained Activation. It is routing DATA, not a credential, RequestTicket, persistent transcript or acceptance authority. Generic users of ChatCompletionsClient connecting to Go must bind a native session with with_session_id before issuing requests. The bound label is limited to128 ASCII alphanumeric/dash/underscore bytes, nonempty, cannot be rebound and cannot echo the selected key.
+OpenCode Go requires a native per-conversation routing header: **x-opencode-session**. The application now binds this once to the approved event ID before exposure and keeps it stable across every inference turn of that retained Activation. It is routing DATA, not a credential, RequestTicket, persistent transcript or acceptance authority. Generic users of ChatCompletionsClient connecting to Go must bind a native session with with_session_id before issuing requests. The bound label is limited to 128 ASCII alphanumeric/dash/underscore bytes, nonempty, cannot be rebound and cannot echo the selected key.
 
 Historical Go/high HTTPS/SSE/actual-WASM/owned-PTY semantic continuation passed on its original explicit-finish profile. This remains valid evidence for that artifact, not a live test of the new no-tool completion profile. Current natural-completion metadata/module has a separate fresh Go/high owned-PTY witness after fixing an over-strict terminal reasoning guard: two accepted semantic tasks and four total calls. The observed success included reasoning on final replies; omission is separately covered by offline regressions. No blind repeat, rebinding or retroactive success is permitted. Detailed prior results and retained namespace provenance are in [CHANGELOG](../../CHANGELOG.md).
 
-## Opt-in live interactive behavioral witness
-
-[test-live-interactive.py](test-live-interactive.py) exercises an owned120x30 PTY and the real native interactive controller. It is excluded from ordinary/CI/module selections. Supply the independently approved reasoning-capable guest via RAIV_GUEST_WASM and the selected credential through the existing OPENCODE_API_KEY environment; never put its value in config/files/logs. Current natural-completion selectors are NEW; high has a passing fresh bounded witness, while disabled modes have offline/filter evidence only. They do not re-run old explicitly finished profiles:
-
-```sh
-# Explicit approval of NEW Definition/module/sources/events and this finite envelope.
-# RAIV_GUEST_WASM must already name the independently approved current guest.
-mkdir -p target/raiv-disk-test-root
-RAIV_LIVE_SMOKE=opencode-go/deepseek-v4.1-flash/natural-recall-high \
-  TMPDIR="$PWD/target/raiv-disk-test-root" \
-  python3 apps/raiv-agent/test-live-interactive.py --with-high-reasoning
-```
-
-The high mode allows3calls/event,6total,256 output tokens and20s/call, actions0; its170s process deadline and1MiB PTY output cap do not widen provider/Core budgets. Nominal patch/final uses2calls/event; a corrective slot is available only for invalid tool decisions, not mandatory completion. Current disabled selectors are /natural-recall (2calls/event) and /natural-recall-correction (3calls/event). Old attempted/accepted profiles/outcomes remain in their original namespaces, not silently upgraded by current selectors. Do not repeat unchanged sampling to manufacture success.
-
-The NEW task-specific Definition asks first to store a nickname with patch_memory then Finish with a normal complete no-call reply, and in a fresh independently pinned session to copy accepted intents.nickname into tactics.recalled_nickname then Finish. Neither the second prompt nor mandate contains the nickname value. Exact semantic Memory, usage, two Consumed inputs/completed Episodes and unchanged world are checked; a no-op Memory write or optional assistant text alone cannot satisfy the semantic witness. Calls to a removed no_op are unknown-tool errors, never successful completion.
-
-The harness submits bracketed paste/Enter only after a fresh editable frame and Esc only after finite-plan blocking. Raw PTY/provider buffers remain RAM-only. Allowlisted output contains proof markers, known control labels, argument sizes/empty-map flags, text/reasoning presence/byte counts, post counts and closed native HTTP error classes—not raw reasoning/text/arguments/headers/keys. Run python3 apps/raiv-agent/test-live-interactive.py --check-filter for offline grammar/selector/privacy checks without credentials/TTY/network.
-
-Every outcome namespace is retained. On refusal/uncertainty/infrastructure failure, stop and inspect independently; process-group termination applies only to harness-owned children and never supplies retry/refund permission. Earlier Launched attempts must not be cleared, repaired, reseeded, rebound or relaunched after a transport/profile change. Status and hashes remain DATA, not currentness/adoption/dispatch authority.
-
 ## Explicit scripted world provisioning
 
-A world must be provisioned **before** accepting the first action: bootstrap refuses post-genesis sources rather than inventing a world that forgot prior spending. Enable the optional closed `[executor]` table in the template, selecting `scripted-unit-world`, separate existing directory, bytes32 world ID, canonical decimal-text virtual units and1..1024 ledger capacity. Existing init/status configs remain valid without this table; world commands require it.
+A world must be provisioned **before** accepting the first action: bootstrap refuses post-genesis sources rather than inventing a world that forgot prior spending. Enable the optional closed `[executor]` table in the template, selecting `scripted-unit-world`, separate existing directory, bytes32 world ID, canonical decimal-text virtual units and 1..1024 ledger capacity. Existing init/status configs remain valid without this table; world commands require it.
 
 `init-world` is an explicit local administrative command, not a guest/provider tool. It requires a separately selected4KiB-capped pin file with exactly three text fields. Agent/program/Definition/domain/default VM resources come from the approved configuration. Root/revision/whole-manifest digest must match the independently selected current main source; reading or hashing a file alone never supplies approval. No automatic source selection, token deserialization, fresh funding on recovery or dispatch permission.
 
@@ -229,27 +232,7 @@ These operands are canonical bounded CBOR DATA, not JSON or a live provider:
 - Grant: separately reviewed BudgetAdmission; every field must equal the event grant.
 - Replies: definite CBOR List of ByteStrings, each containing a complete normalizer-v1 ModelReply with fresh-VM request IDs1..N. This is an explicit mock inference provider, never a second host decision engine. Whole-script/cardinality/per-frame/wire/schema preflight happens before native admission/attempt; semantic selection/corrections/budgets remain guest-owned.
 
-For a reproducible **Survivor-only first wake**, the independent fixture encoder can prepare sample DATA from repository-root (review the event/grant before approving their use):
-
-```sh
-python3 - <<'PY'
-import json, pathlib, sys
-sys.path.insert(0, "fixtures")
-from generate_lifecycle import cbor
-from generate_profiles import decode
-step = json.loads(pathlib.Path("fixtures/format/lifecycle.json").read_text())["steps"][0]
-event = bytes.fromhex(step["input"]["hex"])
-grant = decode(event)["budget_admission"]
-usage = dict(model_calls=0, local_tool_calls=0, input_tokens=None, output_tokens=None, billed_units=None)
-calls = [("patch_memory", step["patch"]), ("trade", step["arguments"])]
-frames = [{"$bytes": cbor(dict(request_id=i+1, text="", usage=usage,
-          calls=[dict(call_id="scripted", tool_id=tool, arguments=args)])).hex()}
-          for i, (tool, args) in enumerate(calls)]
-pathlib.Path("event.cbor").write_bytes(event)
-pathlib.Path("approved-grant.cbor").write_bytes(cbor(grant))
-pathlib.Path("replies.cbor").write_bytes(cbor(frames))
-PY
-```
+The [retry-and-sleep runner](#runnable-retry-and-sleep-demo) builds and approves these operands itself from its fixed recipe; it is the supported way to drive scripted wakes. Hand-made operands must be exact canonical CBOR records, such as the Input vectors in [`fixtures/format/lifecycle.json`](../../fixtures/format/lifecycle.json).
 
 The native command explicitly adopts selected main/world pins, admits the exact ActorWake/grant, persists Reserved/Input, Attempted before VM and Launched before request exposure, then feeds the same actual VM through bounded replies. It commits exactly one verified Command/Finish boundary using accept_local. Full organic feedback/context stays guest-owned; no transcript or patch report is checkpointed. The primary world remains unchanged: **wake does not reserve/debit/submit/execute the accepted Command**.
 

@@ -7,6 +7,7 @@ use crate::{
     store::{MemoryBlockStore, StoreLimits},
 };
 use raiv::{format::DecodeLimits, limits::Limits};
+
 fn caps() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -14,15 +15,18 @@ fn caps() -> ManifestLimits {
         max_admissions: 10,
     }
 }
+
 fn encoded(v: &Value) -> Vec<u8> {
     let mut out = Vec::new();
     ciborium::ser::into_writer(v, &mut out).unwrap();
     out
 }
+
 fn list(v: &mut Value) -> &mut Vec<Value> {
     let Value::Array(a) = v else { panic!() };
     a
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn typed_metadata_postgenesis_history_unresolved_launch_and_await_action_restore_as_data_only() {

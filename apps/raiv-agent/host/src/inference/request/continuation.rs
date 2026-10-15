@@ -1,10 +1,12 @@
 //! One native Run's bounded opaque reasoning carrier. No Debug/Clone/serialization/export.
+
 use super::{
     check_chat_reply_mode, encode_inner, Definition, Limits, ProviderConfig, Request, RequestError,
     Value,
 };
 use crate::{inference::NormalizedReply, run::RequestTicket};
 use raiv::{activation::ModelReply, format::DaslCid};
+
 pub struct ReasoningSession {
     definition: DaslCid,
     limits: Limits,
@@ -14,6 +16,7 @@ pub struct ReasoningSession {
     last: Option<RequestTicket>,
     failed: bool,
 }
+
 impl ReasoningSession {
     /// Requires a separately approved reasoning Definition; construction is not run authority.
     pub fn new(definition: &Definition, limits: Limits) -> Result<Self, RequestError> {
@@ -32,6 +35,7 @@ impl ReasoningSession {
             failed: false,
         })
     }
+
     /// Call only with the originating authorized Run::pending pair. No network; repeated/stale/
     /// cross-run tickets or incomplete native/guest turn joins poison this carrier.
     pub fn encode(
@@ -71,6 +75,7 @@ impl ReasoningSession {
         }
         result
     }
+
     /// Record only after this exact complete reply was successfully routed into the same VM.
     /// Failure requires discarding the live run/carrier, never another exposure or a fake boundary.
     /// Whole normalized reply is retained solely to check text/call/argument joins; reasoning never
@@ -128,6 +133,7 @@ impl ReasoningSession {
         result
     }
 }
+
 pub(super) fn attach(
     records: &[NormalizedReply],
     messages: &mut [Value],
@@ -181,5 +187,6 @@ pub(super) fn attach(
     }
     Ok(())
 }
+
 #[cfg(test)]
 mod tests;

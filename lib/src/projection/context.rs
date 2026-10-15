@@ -27,6 +27,7 @@ pub struct InitialProjection {
     prefix: ModelValue,
     bounds: DecodeLimits,
 }
+
 impl InitialProjection {
     pub fn build(
         snapshot: &RestoredAgent,
@@ -130,6 +131,7 @@ fn tool(
     }
     Ok(())
 }
+
 fn machine(
     writer: &mut RecordEncoder,
     value: &ActivationInput,

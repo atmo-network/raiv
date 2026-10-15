@@ -26,6 +26,7 @@ mod registry;
 mod reply;
 #[path = "unit_budget_tests.rs"]
 mod unit_budget;
+
 use crate::{
     graph::RestoredAgent,
     projection::{EpisodeProjection, HistoryProjection},
@@ -34,6 +35,7 @@ use crate::{
 fn cbor(bytes: &[u8]) -> Cbor {
     ciborium::de::from_reader(bytes).unwrap()
 }
+
 fn field<'a>(value: &'a Cbor, name: &str) -> &'a Cbor {
     let Cbor::Map(fields) = value else {
         panic!("map")
@@ -44,6 +46,7 @@ fn field<'a>(value: &'a Cbor, name: &str) -> &'a Cbor {
         .unwrap()
         .1
 }
+
 fn cid(value: &Cbor) -> Option<DaslCid> {
     if matches!(value, Cbor::Null) {
         return None;
@@ -57,6 +60,7 @@ fn cid(value: &Cbor) -> Option<DaslCid> {
     assert_eq!(bytes[0], 0);
     Some(DaslCid::from_bytes(&bytes[1..]).unwrap())
 }
+
 fn verify(projected: EpisodeProjection<'_>, episode: DaslCid, snapshot: &RestoredAgent) {
     let blocks = snapshot.blocks().collect::<BTreeMap<_, _>>();
     let episode = cbor(blocks[&episode]);

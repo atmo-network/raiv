@@ -1,17 +1,26 @@
 # Rust guest
 
-Package `raiv-agent-guest` supplies pure `Guest::step` bootstrap and compiled scripted/live-demo Activation/reply/candidate handling and the wasm32 exports `memory`, `raiv_alloc`, `raiv_dealloc`, `raiv_step`. Its only runtime dependencies are Core, minicbor and wasm-target dlmalloc with defaults disabled. No std, imports, I/O, randomness, clocks, threads or host callbacks.
+Package `raiv-agent-guest` is the isolated agent: pure `Guest::step` handling of the step ABI, compiled into an import-free `wasm32v1-none` module exporting `memory`, `raiv_alloc`, `raiv_dealloc` and `raiv_step`. It owns context, tools, decisions and state transitions. Its only runtime dependencies are Core, minicbor and, on wasm, dlmalloc, all with defaults disabled: no std, imports, I/O, randomness, clocks, threads or host callbacks.
 
-`scripted_definition(MemoryProfile)` supplies the exact synthetic Veto/Survivor Definition DATA for explicit native bootstrap, reusing compiled registrations with bounded fallible construction. This grants no program/genesis approval. The native application uses it only for metadata; activation/decision logic still runs in the isolated actual module.
-
-`opencode_definition(profile, base_url, model, mandate)` supplies NEW live-demo metadata with the same compiled Veto/Survivor tools as scripted profiles: veto/pass for disabled Memory; patch_memory/trade/set_wake for enabled Memory. Neither profile registers no_op or any model-facing Finish tool. Complete validated zero-call replies select intrinsic Finish; local calls Continue and external calls Yield. Policy/context/selection remains guest-owned, never a native Guest::step fallback. Closed ChatProfile pins provider/protocol/endpoint/model and disabled thinking; opencode_reasoning_definition(..., ReasoningEffort::Low|High) selects enabled thinking for exact deepseek-v4.1-flash. Native ReasoningSession alone retains bounded same-Run transport thought; application selects optional inference.reasoning_effort and drops it before boundary acceptance. No old reasoning/transcript is restored. Tool/policy/module/effort changes require NEW explicit Definition/program approval and namespace, never accepted-byte migration/rebinding. Independent scripted fixtures describe current metadata exactly. Offline native/WASM/application/Controller evidence proves current natural completion, and a separate fresh Go/high owned-PTY witness demonstrates two accepted semantic tasks for this profile; historical live evidence stays bound to its old approved artifacts. Quotes remain synthetic units, not authenticated billing or external authority.
-
-- [Build/runtime checks and ABI](../README.md)
-- [Native bridge](../host/README.md)
+- [Build, runtime checks and ABI](../README.md)
+- [Native host](../host/README.md)
 - [Core package](../../../lib/README.md)
 
-Successful patch replies now return full Memory plus changed/processed_planes/skipped_planes reasons in transient tool-result context. Unsupported top-level names are skipped without synonym mapping; mixed/all-skipped patches remain Continue, retain the immutable prefix and charge admitted work. Report/trajectory/context staging precedes Memory assignment, and diagnostic fields never enter checkpoint Memory or structural records. Compiled descriptor wording and pinned policy explicitly distinguish intended roots from tolerant selection; exact registration/Definition matching remains mandatory. Scripted lifecycle examples cover mixed/all-skipped/processed-no-effect reports against independent canonical witnesses.
+## Profiles
 
-The single-threaded synchronous module owns one exact live input allocation and one output buffer. Foreign/stale pointers and wrong lengths are compared against ownership, never dereferenced; only an exact live input may be freed. Output remains guest-owned until the next step and is not affected by input allocation/free. Borrowed input bytes do not survive a step. Panic traps; fallible allocation returns failure rather than successful completion.
+Each constructor returns the exact Definition for a new, explicitly approved registration. It grants no approval itself, and the host uses it only for metadata; activation always runs in the isolated module.
 
-`initialize`, `activate`, `inference_reply` and `inference_error` are implemented, with `initialized`, `infer`, `boundary` and `error` outputs. `runtime.rs` owns an `Option<Activation<'static>>` with program-static exact compiled registration metadata from `profiles.rs`; no leaked registry or self-reference. Restoration/preparation uses bounded Core APIs and retains no freed-input references. Stale/malformed error frames leave the pending request untouched; a matching failure never creates a candidate. Successful replies retain the same Activation/immutable prefix and bounded trajectory/counters across inference yields. Sealed Yield/Finish emits exact validated candidate DATA, not host acceptance. Host instance/run/admission approval remains open. The pure library is compiled as an rlib for native equality; the explicit Cargo cdylib build produces the isolated module.
+| Constructor | Inference profile | Tools |
+| --- | --- | --- |
+| `scripted_definition(profile)` | Offline fixture model | Veto: `veto`, `pass`; Survivor: `patch_memory`, `trade`, `set_wake` |
+| `opencode_definition(profile, base_url, model, mandate)` | `opencode-go`, thinking disabled | Same compiled tools as the scripted profiles |
+| `opencode_reasoning_definition(…, ReasoningEffort::Low \| High)` | `opencode-go`, thinking enabled for `deepseek-v4.1-flash` | Same; the native host alone keeps same-run reasoning |
+| `openai_compatible_definition(profile, base_url, model, mandate)` | `openai-compatible`, no provider extensions | Survivor's `patch_memory` uses the `anyOf` plane schema |
+
+Existing profiles never change their bytes, because sessions pin them; new behavior arrives as a new profile. No profile registers a `no_op` or model-facing Finish tool: a complete reply without calls selects intrinsic Finish, local calls Continue and external calls Yield. Quotes are synthetic units, not billing or authority.
+
+## Runtime
+
+`runtime.rs` keeps one live `Activation` across inference yields, with its immutable prefix, bounded trajectory and counters. Patch results return the full Memory plus processed/skipped planes and actual change; a rejected patch gets actionable `invalid_patch:` feedback. A sealed Yield or Finish emits exact validated candidate data, never host acceptance. Failures report their category: `corrective_turns_exhausted`, `budget_exhausted`, `context_limit` or `activation_failed`; stale or malformed frames leave the pending request untouched.
+
+The module is single-threaded and synchronous. It owns one live input allocation and one output buffer, compares foreign or stale pointers against ownership without dereferencing them, and keeps output until the next step. Panics trap, and allocation failure is an error, never a successful completion. The library also builds as an rlib, so native and Wasmi runs can be compared byte for byte.

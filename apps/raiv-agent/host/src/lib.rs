@@ -1,5 +1,7 @@
 //! Native Wasmi transport and local administrative ports; agent decisions remain guest-owned.
+
 use core::fmt;
+
 pub mod acceptance;
 pub mod admission;
 mod atomic;
@@ -22,15 +24,19 @@ pub mod simulator;
 pub mod store;
 #[cfg(target_os = "linux")]
 pub mod terminal;
+
 use wasmi::{
     Config, Engine, Linker, Memory, Module, Store, StoreLimits, StoreLimitsBuilder, TypedFunc,
 };
+
 pub const MAX_FRAME_BYTES: usize = 8_388_608;
+
 #[derive(Clone, Copy, Debug)]
 pub struct VmLimits {
     pub memory_bytes: usize,
     pub fuel_per_step: u64,
 }
+
 impl VmLimits {
     pub(crate) fn validate(self) -> Result<(), BridgeError> {
         if self.memory_bytes == 0
@@ -42,6 +48,7 @@ impl VmLimits {
         Ok(())
     }
 }
+
 impl Default for VmLimits {
     fn default() -> Self {
         Self {
@@ -50,6 +57,7 @@ impl Default for VmLimits {
         }
     }
 }
+
 #[derive(Debug)]
 pub enum BridgeError {
     InvalidLimits,
@@ -61,11 +69,13 @@ pub enum BridgeError {
     Trap(wasmi::Error),
     Output(output::DecodeError),
 }
+
 impl From<wasmi::Error> for BridgeError {
     fn from(error: wasmi::Error) -> Self {
         Self::Trap(error)
     }
 }
+
 impl fmt::Display for BridgeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -80,7 +90,9 @@ impl fmt::Display for BridgeError {
         }
     }
 }
+
 impl std::error::Error for BridgeError {}
+
 /// Import-free finite-memory/fuel VM. This is isolation/transport, not module approval,
 /// canonical acceptance, a dispatch permit or proof against the trusted host itself.
 pub struct GuestVm {
@@ -92,6 +104,7 @@ pub struct GuestVm {
     limits: VmLimits,
     dead: bool,
 }
+
 impl GuestVm {
     pub fn new(wasm: &[u8], limits: VmLimits) -> Result<Self, BridgeError> {
         if wasm.len() > MAX_FRAME_BYTES {
@@ -132,6 +145,7 @@ impl GuestVm {
             dead: false,
         })
     }
+
     /// One complete frame; copy guest-owned output before any later step and free only
     /// the exact input allocation. Closed typed output preflight precedes return.
     /// Trap/zero/invalid range or invalid output schema/integrity discards the instance.
@@ -148,6 +162,7 @@ impl GuestVm {
         }
         result
     }
+
     fn exchange(&mut self, bytes: &[u8]) -> Result<Vec<u8>, BridgeError> {
         self.store.set_fuel(self.limits.fuel_per_step)?;
         let len = u32::try_from(bytes.len()).map_err(|_| BridgeError::FrameLimit)?;
@@ -186,6 +201,7 @@ impl GuestVm {
         Ok(result)
     }
 }
+
 fn checked_range(
     ptr: u32,
     len: u32,
@@ -200,5 +216,6 @@ fn checked_range(
     }
     Ok(ptr as usize..end)
 }
+
 #[cfg(test)]
 mod tests;

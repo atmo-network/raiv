@@ -59,42 +59,53 @@ impl RestoredAgent {
     pub fn root(&self) -> DaslCid {
         self.closure.root()
     }
+
     pub fn state(&self) -> &AgentState {
         self.closure.state()
     }
+
     pub fn definition(&self) -> &Definition {
         self.closure.definition()
     }
+
     pub fn memory(&self) -> Option<&Memory> {
         self.state()
             .memory_link()
             .map(|cid| self.closure.find_memory(cid).expect("restored root Memory"))
     }
+
     pub fn current_episode(&self) -> Option<&Episode> {
         self.state()
             .current_episode_link()
             .map(|cid| self.closure.episode(cid))
     }
+
     /// Completed Episodes in declared chronological order, borrowed from the retained closure.
     pub fn history(&self) -> impl Iterator<Item = &Episode> {
         self.state().history().map(|cid| self.closure.episode(cid))
     }
+
     /// Typed lookup in this exact required closure only; no missing-block hydration.
     pub fn boundary(&self, cid: DaslCid) -> Option<&Boundary> {
         self.closure.find_boundary(cid)
     }
+
     pub fn input(&self, cid: DaslCid) -> Option<&ActivationInput> {
         self.closure.find_input(cid)
     }
+
     pub fn memory_block(&self, cid: DaslCid) -> Option<&Memory> {
         self.closure.find_memory(cid)
     }
+
     pub fn block_count(&self) -> u64 {
         self.closure.block_count()
     }
+
     pub fn encoded_bytes(&self) -> u64 {
         self.closure.encoded_bytes()
     }
+
     /// Exact unique bytes; discovery order is not CAR export order.
     pub fn blocks(&self) -> impl Iterator<Item = (DaslCid, &[u8])> {
         self.closure.blocks()

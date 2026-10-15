@@ -1,4 +1,5 @@
 //! Scoped volatile Actor/grant approval and launch reservation, no CAS/Receipt ledger.
+
 use super::*;
 use crate::{
     admission::{AdmissionBook, AdmissionError, AdmissionStatus},
@@ -6,6 +7,7 @@ use crate::{
     run::{Phase, RunError},
 };
 use raiv::{input::ActivationInput, limits::Limits};
+
 pub(crate) fn input(event: u8, admission: u8) -> ActivationInput {
     let mut value = packet();
     set(&mut value, "event_id", Value::Bytes(vec![event; 32]));
@@ -18,6 +20,7 @@ pub(crate) fn input(event: u8, admission: u8) -> ActivationInput {
     set(&mut value, "budget_admission", grant);
     ActivationInput::decode(&encode(&value), &Limits::default()).unwrap()
 }
+
 pub(crate) fn registry(wasm: &[u8]) -> Registry {
     let source = routing::source();
     let pin = routing::pin(wasm, &source);
@@ -31,6 +34,7 @@ pub(crate) fn registry(wasm: &[u8]) -> Registry {
         .unwrap();
     registry
 }
+
 #[test]
 fn explicit_grant_and_actor_phase_precede_atomic_bounded_exact_input_reservation() {
     assert!(matches!(
@@ -109,6 +113,7 @@ fn explicit_grant_and_actor_phase_precede_atomic_bounded_exact_input_reservation
     drop(token);
     assert_eq!(book.record([0xb0; 32], [0x60; 32]), Some(record));
 }
+
 #[test]
 fn foreign_tokens_wrong_modules_and_failed_launch_cannot_free_or_reuse_admission() {
     let wasm = output::invalid_output_module();
@@ -150,6 +155,7 @@ fn foreign_tokens_wrong_modules_and_failed_launch_cannot_free_or_reuse_admission
     ));
     assert_eq!(a.record([0xb0; 32], [0x60; 32]), Some(failed));
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn admitted_actual_run_is_bound_to_one_origin_while_unadmitted_recomputation_cannot_claim_it() {

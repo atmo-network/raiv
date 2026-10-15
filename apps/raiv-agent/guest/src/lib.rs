@@ -1,16 +1,18 @@
 //! Pure no_std compiled demo Activation/reply/candidate runtime; no host acceptance.
 #![no_std]
 extern crate alloc;
+
 mod abi;
 #[cfg(target_arch = "wasm32")]
 mod exports;
 mod profiles;
 mod runtime;
+
 pub use abi::{AbiError, MAX_FRAME_BYTES};
 use alloc::vec::Vec;
 pub use profiles::{
-    opencode_definition, opencode_reasoning_definition, scripted_definition, ChatProfile,
-    ReasoningEffort,
+    openai_compatible_definition, opencode_definition, opencode_reasoning_definition,
+    scripted_definition, ChatProfile, Provider, ReasoningEffort,
 };
 use raiv::{definition::Definition, graph::Genesis, limits::Limits, memory::Memory};
 
@@ -21,6 +23,7 @@ pub struct Guest {
     live: Option<raiv::activation::Activation<'static>>,
     sequence: Option<raiv::activation::RequestSequence>,
 }
+
 impl Guest {
     pub const fn new() -> Self {
         Self {
@@ -29,6 +32,7 @@ impl Guest {
             sequence: None,
         }
     }
+
     /// Rejected outer ABI frames and stale correlations preserve the pending Activation.
     /// Matching replies advance registered RAM work; fatal reply/inference errors
     /// terminate without a candidate, while successful sealing emits boundary DATA.
@@ -39,6 +43,7 @@ impl Guest {
             Err(error) => abi::error(error),
         }
     }
+
     fn initialize(&mut self, input: abi::Initialize<'_>) -> Result<Vec<u8>, AbiError> {
         if self.initialized || self.live.is_some() {
             return Err(AbiError::AlreadyInitialized);

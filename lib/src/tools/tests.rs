@@ -10,14 +10,17 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 use serde_json::Value;
 
 static CALLBACKS: AtomicUsize = AtomicUsize::new(0);
+
 fn validate(_: &[u8]) -> Result<(), ToolFailure> {
     CALLBACKS.fetch_add(1, Ordering::SeqCst);
     Err(ToolFailure::InvalidArguments)
 }
+
 fn plan(_: PlanningContext<'_>, _: &[u8]) -> Result<ModelValue, ToolFailure> {
     CALLBACKS.fetch_add(1, Ordering::SeqCst);
     Err(ToolFailure::PlanningFailed)
 }
+
 fn definition(index: usize) -> Definition {
     let fixtures: Value =
         serde_json::from_str(include_str!("../../../fixtures/format/definition.json")).unwrap();
@@ -27,6 +30,7 @@ fn definition(index: usize) -> Definition {
     )
     .unwrap()
 }
+
 fn implementation(control: ToolControl) -> ToolImplementation {
     match control {
         ToolControl::Continue => ToolImplementation::MemoryPatch,
@@ -34,6 +38,7 @@ fn implementation(control: ToolControl) -> ToolImplementation {
         ToolControl::Yield => ToolImplementation::Yield { validate, plan },
     }
 }
+
 fn registrations(definition: &Definition) -> Vec<ToolRegistration<'_>> {
     definition
         .tools()
@@ -43,6 +48,7 @@ fn registrations(definition: &Definition) -> Vec<ToolRegistration<'_>> {
         })
         .collect()
 }
+
 fn pure_definition(profile: MemoryProfile) -> Definition {
     Definition::encode(
         &DefinitionSpec {

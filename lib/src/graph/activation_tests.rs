@@ -6,6 +6,7 @@ use crate::{
     },
     definition::ToolControl,
 };
+
 pub(super) fn incoming(snapshot: &RestoredAgent) -> Cbor {
     let mut source = full_context::incoming(snapshot);
     let grant = map_mut(&mut source).get_mut("budget_admission").unwrap();
@@ -13,6 +14,7 @@ pub(super) fn incoming(snapshot: &RestoredAgent) -> Cbor {
     map_mut(grant).insert("remaining_episode_units".into(), Cbor::Integer(20.into()));
     source
 }
+
 pub(super) fn policy() -> RunPolicy {
     RunPolicy {
         caller: Limits::default(),
@@ -24,6 +26,7 @@ pub(super) fn policy() -> RunPolicy {
         },
     }
 }
+
 #[test]
 fn owned_prepare_captures_all_positive_snapshots_and_first_request_matches_independent_context_without_callbacks_or_repeated_debits(
 ) {
@@ -97,6 +100,7 @@ fn owned_prepare_captures_all_positive_snapshots_and_first_request_matches_indep
         }
     }
 }
+
 #[test]
 fn no_tool_definition_finishes_with_empty_or_textual_complete_reply_without_corrective_or_local_work(
 ) {
@@ -155,6 +159,7 @@ fn no_tool_definition_finishes_with_empty_or_textual_complete_reply_without_corr
         assert!(run.advance_ram(key, &encode(&body)).is_err());
     }
 }
+
 #[test]
 fn model_request_enabled_descriptors_obey_counts_and_quotes_but_keep_immutable_declared_prefix_and_last_reply_finish(
 ) {
@@ -216,6 +221,7 @@ fn model_request_enabled_descriptors_obey_counts_and_quotes_but_keep_immutable_d
         ))
     );
 }
+
 #[test]
 fn preparation_failures_preserve_the_unspent_instance_sequence_and_reject_inference_or_control_exhaustion_early(
 ) {
@@ -284,6 +290,7 @@ fn preparation_failures_preserve_the_unspent_instance_sequence_and_reject_infere
         .unwrap();
     assert_eq!(activation.request().unwrap().binding().request_id, 1);
 }
+
 #[test]
 fn combined_context_limits_failure_happens_before_first_debit_and_exact_context_ceiling_succeeds() {
     let fixture = &roles()[0];
@@ -349,6 +356,7 @@ fn combined_context_limits_failure_happens_before_first_debit_and_exact_context_
     );
     assert_eq!(activation.units().reserved_units(), 1);
 }
+
 #[test]
 fn wrong_or_matching_inference_failures_preserve_or_close_the_owned_request_without_checkpoint_or_nonce_reset(
 ) {
@@ -398,6 +406,7 @@ fn wrong_or_matching_inference_failures_preserve_or_close_the_owned_request_with
         .unwrap();
     assert_eq!(next.request().unwrap().binding().request_id, 2); // Recovery authority/lost-attempt accounting remains a host prerequisite.
 }
+
 #[test]
 fn zero_caller_history_can_materialize_genesis_but_not_prepare_an_unretainable_next_completed_window(
 ) {
@@ -438,6 +447,7 @@ fn zero_caller_history_can_materialize_genesis_but_not_prepare_an_unretainable_n
     assert_eq!(failure.reason, ActivationError::HistoryCapacity);
     assert_eq!(failure.sequence.last_id(), 0);
 }
+
 #[test]
 fn full_width_last_revision_is_valid_data_but_cannot_prepare_a_runnable_boundary_increment() {
     let (mut blocks, root) = super::super::super::history::completed_pair();

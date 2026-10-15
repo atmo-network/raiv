@@ -32,6 +32,7 @@ pub enum InputCompatibilityError {
     WrongPhase,
     ReceiptMismatch,
 }
+
 impl fmt::Display for InputCompatibilityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -41,6 +42,7 @@ impl fmt::Display for InputCompatibilityError {
         }
     }
 }
+
 impl core::error::Error for InputCompatibilityError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
@@ -49,6 +51,7 @@ impl core::error::Error for InputCompatibilityError {
         }
     }
 }
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PrepareError {
     InvalidRootCodec,
@@ -63,16 +66,19 @@ pub enum PrepareError {
     Graph(GraphError),
     Compatibility(InputCompatibilityError),
 }
+
 impl From<GraphError> for PrepareError {
     fn from(error: GraphError) -> Self {
         Self::Graph(error)
     }
 }
+
 impl From<InputCompatibilityError> for PrepareError {
     fn from(error: InputCompatibilityError) -> Self {
         Self::Compatibility(error)
     }
 }
+
 impl fmt::Display for PrepareError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -90,6 +96,7 @@ impl fmt::Display for PrepareError {
         })
     }
 }
+
 impl core::error::Error for PrepareError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
@@ -109,6 +116,7 @@ pub struct PreparedInput {
     binding: InputBinding,
     input: ActivationInput,
 }
+
 impl PreparedInput {
     pub fn new(binding: InputBinding, input: ActivationInput) -> Result<Self, PrepareError> {
         binding
@@ -123,9 +131,11 @@ impl PreparedInput {
         }
         Ok(Self { binding, input })
     }
+
     pub fn binding(&self) -> InputBinding {
         self.binding
     }
+
     pub fn input(&self) -> &ActivationInput {
         &self.input
     }
@@ -183,16 +193,20 @@ pub struct ValidatedInput<'a> {
     packet: &'a PreparedInput,
     caller: Limits,
 }
+
 impl<'a> ValidatedInput<'a> {
     pub fn snapshot(&self) -> &'a RestoredAgent {
         self.snapshot
     }
+
     pub fn input(&self) -> &'a ActivationInput {
         self.packet.input()
     }
+
     pub fn binding(&self) -> InputBinding {
         self.packet.binding()
     }
+
     pub fn caller_limits(&self) -> &Limits {
         &self.caller
     }
@@ -214,6 +228,7 @@ fn wire_limits(definition: &Limits, caller: &Limits) -> Limits {
         ..*definition
     }
 }
+
 fn check_snapshot_caps(snapshot: &RestoredAgent, caller: &Limits) -> Result<(), PrepareError> {
     if snapshot.block_count() > caller.max_blocks {
         return Err(GraphError::BlockCountLimit.into());

@@ -11,12 +11,15 @@ fn hex(text: &str) -> Vec<u8> {
         .map(|i| u8::from_str_radix(&text[i..i + 2], 16).unwrap())
         .collect()
 }
+
 fn fixtures() -> Value {
     serde_json::from_str(include_str!("../../../fixtures/format/state.json")).unwrap()
 }
+
 fn record(index: usize) -> Cbor {
     node(&fixtures()[index]["record"])
 }
+
 fn spec<'a>(state: &AgentState, history: &'a [DaslCid]) -> AgentStateSpec<'a> {
     AgentStateSpec {
         agent_id: state.agent_id(),
@@ -28,6 +31,7 @@ fn spec<'a>(state: &AgentState, history: &'a [DaslCid]) -> AgentStateSpec<'a> {
         history,
     }
 }
+
 fn encode(state: &AgentState, bounds: &DecodeLimits) -> Result<AgentState, StateError> {
     AgentState::encode(&spec(state, &state.history().collect::<Vec<_>>()), bounds)
 }

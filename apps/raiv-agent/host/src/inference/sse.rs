@@ -1,8 +1,10 @@
 //! Owns bounded incremental Chat Completions SSE DATA, not HTTP success, credentials or guest advancement.
+
 use super::{json, normalize_chat_completion, NormalizeError, NormalizedReply, Writer};
 use raiv::{format::DecodeLimits, limits::Limits};
 use serde_json::{json, Value};
 use std::fmt;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StreamError {
     Frame,
@@ -14,6 +16,7 @@ pub enum StreamError {
     Allocation,
     Normalize(NormalizeError),
 }
+
 impl fmt::Display for StreamError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -28,12 +31,15 @@ impl fmt::Display for StreamError {
         })
     }
 }
+
 impl std::error::Error for StreamError {}
+
 impl From<NormalizeError> for StreamError {
     fn from(v: NormalizeError) -> Self {
         Self::Normalize(v)
     }
 }
+
 /// Explicit native transport bounds; bytes include ignored metadata/comments and every chunk.
 #[derive(Clone, Copy)]
 pub struct StreamLimits {
@@ -41,11 +47,13 @@ pub struct StreamLimits {
     pub max_event_bytes: u64,
     pub max_events: u64,
 }
+
 struct Call {
     id: String,
     name: String,
     arguments: String,
 }
+
 /// Incremental DATA assembler for one native pending request. No normalized reply exists until
 /// consuming finish after successful HTTP EOF. Errors poison it; preview text is provisional only.
 pub struct ChatCompletionStream {
@@ -74,6 +82,7 @@ pub struct ChatCompletionStream {
     terminal: Option<String>,
     usage: Option<Value>,
 }
+
 impl ChatCompletionStream {
     pub fn new(
         request_id: u64,
@@ -125,9 +134,11 @@ impl ChatCompletionStream {
         )?;
         Ok(stream)
     }
+
     pub fn provisional_text(&self) -> &str {
         &self.text
     }
+
     /// Feed arbitrary byte splits, including within CRLF, UTF-8 and JSON strings.
     /// Neither return value nor provisional_text is successful inference DATA.
     pub fn push(&mut self, bytes: &[u8]) -> Result<(), StreamError> {
@@ -140,6 +151,7 @@ impl ChatCompletionStream {
         }
         result
     }
+
     fn feed(&mut self, bytes: &[u8]) -> Result<(), StreamError> {
         self.wire = self
             .wire
@@ -172,6 +184,7 @@ impl ChatCompletionStream {
         }
         Ok(())
     }
+
     fn event_byte(&mut self) -> Result<(), StreamError> {
         self.event_bytes = self.event_bytes.checked_add(1).ok_or(StreamError::Limit)?;
         if self.event_bytes > self.bounds.max_event_bytes {
@@ -179,6 +192,7 @@ impl ChatCompletionStream {
         }
         Ok(())
     }
+
     fn line_end(&mut self) -> Result<(), StreamError> {
         let raw = std::mem::take(&mut self.line);
         let raw = if self.first_line {
@@ -240,6 +254,7 @@ impl ChatCompletionStream {
         }
         Ok(())
     }
+
     fn event(&mut self, data: &[u8]) -> Result<(), StreamError> {
         self.events = self.events.checked_add(1).ok_or(StreamError::Limit)?;
         if self.events > self.bounds.max_events {
@@ -263,7 +278,11 @@ impl ChatCompletionStream {
                 max_collection_entries: self.limits.max_collection_entries,
             },
         )?;
-        if value.get("model").and_then(Value::as_str) != Some(self.model.as_str()) {
+        if !value
+            .get("model")
+            .and_then(Value::as_str)
+            .is_some_and(|reported| super::model_matches(&self.model, reported))
+        {
             return Err(StreamError::Normalize(NormalizeError::Model));
         }
         if !value.get("error").is_none_or(Value::is_null) {
@@ -389,7 +408,9 @@ impl ChatCompletionStream {
                     self.calls.push(call);
                 }
                 let call = &mut self.calls[index];
-                if part(value, "id")?.is_some_and(|id| id != call.id)
+                // Continuation chunks may repeat an empty id (common in OpenAI-compatible servers);
+                // only a nonempty different id would change the call identity.
+                if part(value, "id")?.is_some_and(|id| !id.is_empty() && id != call.id)
                     || part(value, "type")?.is_some_and(|v| v != "function")
                 {
                     return Err(StreamError::Frame);
@@ -435,6 +456,7 @@ impl ChatCompletionStream {
         }
         Ok(())
     }
+
     /// Call only after successful HTTP EOF, never upon terminal chunk/DONE alone.
     /// An unfinished trailing event, interruption or poisoned stream cannot return a reply.
     pub fn finish(mut self) -> Result<NormalizedReply, StreamError> {
@@ -463,6 +485,7 @@ impl ChatCompletionStream {
         .map_err(Into::into)
     }
 }
+
 fn part<'a>(value: &'a Value, key: &str) -> Result<Option<&'a str>, StreamError> {
     match value.get(key) {
         None | Some(Value::Null) => Ok(None),
@@ -470,6 +493,7 @@ fn part<'a>(value: &'a Value, key: &str) -> Result<Option<&'a str>, StreamError>
         _ => Err(StreamError::Frame),
     }
 }
+
 fn charge(stored: &mut u64, len: usize, cap: u64) -> Result<(), StreamError> {
     *stored = stored.checked_add(len as u64).ok_or(StreamError::Limit)?;
     if *stored > cap {
@@ -477,6 +501,7 @@ fn charge(stored: &mut u64, len: usize, cap: u64) -> Result<(), StreamError> {
     }
     Ok(())
 }
+
 fn append(target: &mut String, value: &str, stored: &mut u64, cap: u64) -> Result<(), StreamError> {
     charge(stored, value.len(), cap)?;
     target
@@ -485,16 +510,19 @@ fn append(target: &mut String, value: &str, stored: &mut u64, cap: u64) -> Resul
     target.push_str(value);
     Ok(())
 }
+
 impl std::io::Write for Writer {
     fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
         minicbor::encode::Write::write_all(self, bytes)
             .map_err(|_| std::io::Error::other("bounded provider JSON"))?;
         Ok(bytes.len())
     }
+
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
     }
 }
+
 fn bounded_json(value: &Value, cap: u64) -> Result<Vec<u8>, StreamError> {
     let mut writer = Writer {
         bytes: Vec::new(),
@@ -503,5 +531,6 @@ fn bounded_json(value: &Value, cap: u64) -> Result<Vec<u8>, StreamError> {
     serde_json::to_writer(&mut writer, value).map_err(|_| StreamError::Limit)?;
     Ok(writer.bytes)
 }
+
 #[cfg(test)]
 mod tests;

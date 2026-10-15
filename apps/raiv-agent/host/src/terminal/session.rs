@@ -1,4 +1,5 @@
 //! Native terminal lifecycle only. Caller owns event admission, grants, pins and live driver.
+
 use super::TerminalUi;
 use crossterm::{
     cursor::{Hide, Show},
@@ -12,14 +13,18 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
     time::Duration,
 };
+
 static OWNED: AtomicBool = AtomicBool::new(false);
+
 pub struct TerminalSession {
     terminal: Terminal<CrosstermBackend<Stdout>>,
     _restore: Restore,
 }
+
 struct Restore {
     raw: bool,
 }
+
 impl Drop for Restore {
     fn drop(&mut self) {
         if self.raw {
@@ -34,6 +39,7 @@ impl Drop for Restore {
         OWNED.store(false, Ordering::Release);
     }
 }
+
 impl TerminalSession {
     /// Rejects non-TTY stdin/stdout before changing terminal state. No guest/provider/FS/config access.
     pub fn open() -> io::Result<Self> {
@@ -67,9 +73,11 @@ impl TerminalSession {
             _restore: restore,
         })
     }
+
     pub fn draw(&mut self, ui: &mut TerminalUi) -> io::Result<()> {
         self.terminal.draw(|frame| ui.render(frame)).map(|_| ())
     }
+
     pub fn read(&mut self, timeout: Duration) -> io::Result<Option<Event>> {
         if event::poll(timeout)? {
             event::read().map(Some)

@@ -1,5 +1,7 @@
 //! Real guest equality: partial/all-skipped feedback is transient Continue, not correction.
+
 use super::*;
+
 fn report(response: &[u8]) -> Value {
     let decoded = decode(response);
     assert_eq!(field(&decoded, "type"), &Value::Text("infer".into()));
@@ -18,6 +20,7 @@ fn report(response: &[u8]) -> Value {
     assert_eq!(field(&results[0], "ok"), &Value::Bool(true));
     field(&results[0], "result").clone()
 }
+
 fn sequence(mut step: impl FnMut(&[u8]) -> Vec<u8>) {
     let data = genesis(1);
     let initial = step(&activate(&data, &packet()));
@@ -172,6 +175,7 @@ fn sequence(mut step: impl FnMut(&[u8]) -> Vec<u8>) {
     }
     assert!(memory_found);
 }
+
 fn provider_json_sequence(mut step: impl FnMut(&[u8]) -> Vec<u8>, stream: bool) {
     assert_eq!(
         field(&decode(&step(&activate(&genesis(1), &packet()))), "type"),
@@ -249,11 +253,13 @@ fn provider_json_sequence(mut step: impl FnMut(&[u8]) -> Vec<u8>, stream: bool) 
         }
     }
 }
+
 #[test]
 fn native_mock_provider_json_normalization_drives_retained_guest_without_native_reasoning() {
     let mut guest = guest::Guest::new();
     provider_json_sequence(|input| guest.step(input).unwrap(), false);
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_mock_provider_json_normalization_equals_native_across_patch_then_explicit_finish() {
@@ -270,11 +276,13 @@ fn real_mock_provider_json_normalization_equals_native_across_patch_then_explici
         false,
     );
 }
+
 #[test]
 fn native_mock_provider_sse_completes_before_retained_guest_advancement() {
     let mut guest = guest::Guest::new();
     provider_json_sequence(|input| guest.step(input).unwrap(), true);
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_mock_provider_sse_completion_equals_native_across_patch_then_explicit_finish() {
@@ -291,6 +299,7 @@ fn real_mock_provider_sse_completion_equals_native_across_patch_then_explicit_fi
         true,
     );
 }
+
 fn depth_failure(mut step: impl FnMut(&[u8]) -> Vec<u8>) {
     assert_eq!(
         field(&decode(&step(&activate(&genesis(1), &packet()))), "type"),
@@ -312,11 +321,13 @@ fn depth_failure(mut step: impl FnMut(&[u8]) -> Vec<u8>) {
         &Value::Text("activation_failed".into())
     );
 }
+
 #[test]
 fn native_organic_report_embedding_depth_failure_never_seals_a_candidate() {
     let mut guest = guest::Guest::new();
     depth_failure(|input| guest.step(input).unwrap());
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_organic_report_embedding_depth_failure_equals_native_without_boundary() {
@@ -330,12 +341,14 @@ fn real_organic_report_embedding_depth_failure_equals_native_without_boundary() 
         actual
     });
 }
+
 #[test]
 fn native_organic_patch_partial_and_all_skipped_continue_with_feedback_and_no_persistent_diagnostics(
 ) {
     let mut guest = guest::Guest::new();
     sequence(|input| guest.step(input).unwrap());
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_organic_patch_reports_equal_native_across_retained_activation_then_finish() {

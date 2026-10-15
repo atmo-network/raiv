@@ -1,4 +1,5 @@
 //! Explicit ActorWake or world-ledger ActionResult approval -> one actual-WASM boundary, no execution.
+
 use super::{
     bounds,
     config::{id, Config},
@@ -35,6 +36,7 @@ use raiv_agent_host::{
     },
 };
 use std::path::Path;
+
 pub struct RequestFiles<'a> {
     pub event: &'a Path,
     pub grant: &'a Path,
@@ -42,6 +44,7 @@ pub struct RequestFiles<'a> {
     pub pin: &'a Path,
     pub world_digest: &'a str,
 }
+
 fn script<'a>(bytes: &'a [u8], caller: &Limits) -> Result<Vec<&'a [u8]>> {
     let cap = caller
         .max_model_reply_bytes
@@ -76,25 +79,32 @@ fn script<'a>(bytes: &'a [u8], caller: &Limits) -> Result<Vec<&'a [u8]>> {
     }
     Ok(frames)
 }
+
 /// Native transport port only. DATA/pins/phase/freshness are checked before prepare;
 /// prepare precedes durable Reserved/Attempted/Launched, complete follows Launched.
 pub(super) trait ProviderPort {
     fn prepare(&mut self, definition: &Definition, input: &ActivationInput) -> Result<()>;
+
     fn complete(&mut self, id: u64, payload: &[u8], limits: &Limits) -> Result<NormalizedReply>;
+
     /// Optional native diagnostics receive finite labels, never reply/guest error strings.
     fn guest_refused(&mut self, _category: &'static str) {}
 }
+
 #[derive(Clone, Copy)]
 pub(super) struct NativeFailure(FailureKind);
+
 #[derive(Clone, Copy)]
 enum FailureKind {
     Provider(ClientError),
     Stage(&'static str),
 }
+
 impl NativeFailure {
     pub(super) fn provider(error: ClientError) -> Self {
         Self(FailureKind::Provider(error))
     }
+
     pub(super) fn stage(category: &'static str) -> Self {
         let label = match category {
             "request_mapping"
@@ -113,6 +123,9 @@ impl NativeFailure {
             | "vm_bridge"
             | "candidate_verification"
             | "guest_activation_failed"
+            | "guest_corrective_turns_exhausted"
+            | "guest_budget_exhausted"
+            | "guest_context_limit"
             | "guest_candidate_failed"
             | "guest_wrong_request"
             | "guest_inference_failed"
@@ -122,11 +135,13 @@ impl NativeFailure {
         Self(FailureKind::Stage(label))
     }
 }
+
 impl std::fmt::Debug for NativeFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Display::fmt(self, f)
     }
 }
+
 impl std::fmt::Display for NativeFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.0 {
@@ -135,12 +150,15 @@ impl std::fmt::Display for NativeFailure {
         }
     }
 }
+
 impl std::error::Error for NativeFailure {}
+
 struct LiveProvider<'a> {
     config: &'a ProviderConfig,
     client: Option<ChatCompletionsClient>,
     failure: Option<NativeFailure>,
 }
+
 impl ProviderPort for LiveProvider<'_> {
     fn prepare(&mut self, definition: &Definition, input: &ActivationInput) -> Result<()> {
         // One context/Activation owns the route; all retained infer turns reuse this native label.
@@ -167,6 +185,7 @@ impl ProviderPort for LiveProvider<'_> {
             }
         }
     }
+
     fn complete(&mut self, id: u64, payload: &[u8], limits: &Limits) -> Result<NormalizedReply> {
         let result = self
             .client
@@ -178,10 +197,12 @@ impl ProviderPort for LiveProvider<'_> {
             error.into()
         })
     }
+
     fn guest_refused(&mut self, category: &'static str) {
         self.failure = Some(NativeFailure::stage(category));
     }
 }
+
 pub fn execute(
     config: &Config,
     definition: &Definition,
@@ -207,6 +228,7 @@ pub fn execute(
         execute_using(config, definition, module, files, cause, None)
     }
 }
+
 fn execute_using(
     config: &Config,
     definition: &Definition,
@@ -240,6 +262,7 @@ fn execute_using(
     };
     Ok(execute_request(config, definition, module, request, provider)?.display)
 }
+
 /// Native administrative DATA, never provider-selected authority. No transcript/temporary input file.
 pub(super) struct NativeRequest {
     pub paired: WorldRecoveryPin,
@@ -249,12 +272,20 @@ pub(super) struct NativeRequest {
     pub script: Option<Vec<u8>>,
     pub capture_continuation: bool,
 }
+
 pub(super) struct Accepted {
     pub display: String,
     pub next: Option<WorldRecoveryPin>,
     pub await_actor: bool,
     pub model_text: Option<String>,
+    /// Presentation facts of the accepted boundary, not a further approval.
+    pub revision: u64,
+    pub root: String,
+    pub model_calls: usize,
+    /// Compact JSON of Memory before and after, present only when this boundary changed it.
+    pub memory_change: Option<(String, String)>,
 }
+
 pub(super) fn execute_native(
     config: &Config,
     definition: &Definition,
@@ -277,6 +308,7 @@ pub(super) fn execute_native(
         }
     })
 }
+
 pub(super) fn execute_request(
     config: &Config,
     definition: &Definition,
@@ -353,6 +385,10 @@ pub(super) fn execute_request(
     let reg = registry
         .agent(config.agent)
         .ok_or_else(|| fail("approved source unavailable"))?;
+    let memory_before = reg
+        .snapshot()
+        .memory()
+        .map(|memory| (memory.cid(), memory.json().to_string()));
     let mut world = ScriptedWorld::adopt(
         reg,
         &admissions,
@@ -481,6 +517,9 @@ pub(super) fn execute_request(
                 if let Some(raiv_agent_host::output::Output::Error { code }) = run.output() {
                     let label = match code {
                         "activation_failed" => "guest_activation_failed",
+                        "corrective_turns_exhausted" => "guest_corrective_turns_exhausted",
+                        "budget_exhausted" => "guest_budget_exhausted",
+                        "context_limit" => "guest_context_limit",
                         "candidate_failed" => "guest_candidate_failed",
                         "wrong_inference_request" => "guest_wrong_request",
                         "inference_failed" => "guest_inference_failed",
@@ -552,18 +591,32 @@ pub(super) fn execute_request(
     } else {
         None
     };
+    let memory = accepted.snapshot().memory();
+    let memory_change = memory
+        .filter(|memory| memory_before.as_ref().map(|(cid, _)| *cid) != Some(memory.cid()))
+        .map(|memory| {
+            let before = memory_before.map_or_else(|| "{}".to_owned(), |(_, json)| json);
+            (before, memory.json().to_string())
+        });
     Ok(Accepted {
         display,
         next,
         await_actor,
         model_text,
+        revision: accepted.anchor().revision,
+        root: accepted.anchor().root.to_string(),
+        model_calls: count,
+        memory_change,
     })
 }
+
 #[cfg(test)]
 mod live_tests;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn whole_script_preflight_rejects_empty_wrong_type_duplicate_and_oversized_frames_without_a_vm()
     {

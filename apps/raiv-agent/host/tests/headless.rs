@@ -10,6 +10,7 @@ mod resume;
 mod scenario;
 #[path = "headless/wake.rs"]
 mod wake;
+
 use raiv::{
     definition::MemoryProfile,
     format::{DaslCid, DaslCodec},
@@ -21,8 +22,11 @@ use std::{
     process::{Command, Output},
     sync::atomic::{AtomicU64, Ordering},
 };
+
 static NEXT: AtomicU64 = AtomicU64::new(0);
+
 struct Directory(PathBuf);
+
 impl Directory {
     fn new() -> Self {
         let p = std::env::temp_dir().join(format!(
@@ -34,14 +38,17 @@ impl Directory {
         Self(p)
     }
 }
+
 impl Drop for Directory {
     fn drop(&mut self) {
         fs::remove_dir_all(&self.0).unwrap();
     }
 }
+
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
+
 fn quote(path: &Path) -> String {
     format!(
         "\"{}\"",
@@ -51,6 +58,7 @@ fn quote(path: &Path) -> String {
             .replace('"', "\\\"")
     )
 }
+
 fn config(module: &Path, dir: &Path, profile: &str, digest: [u8; 32]) -> String {
     format!(
         r#"schema_version=1
@@ -78,6 +86,7 @@ adapter="local"
         quote(dir)
     )
 }
+
 fn command(kind: &str, path: &Path) -> Output {
     Command::new(env!("CARGO_BIN_EXE_raiv-agent"))
         .args([kind, "--config"])
@@ -85,6 +94,7 @@ fn command(kind: &str, path: &Path) -> Output {
         .output()
         .unwrap()
 }
+
 fn contents(path: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
     fs::read_dir(path)
         .unwrap()
@@ -95,9 +105,11 @@ fn contents(path: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
         })
         .collect()
 }
+
 fn world_config(module: &Path, dir: &Path, world: &Path, profile: &str, pin: [u8; 32]) -> String {
     config(module,dir,profile,pin)+&format!("\n[executor]\nadapter=\"scripted-unit-world\"\ndirectory={}\nworld_id=\"{}\"\nvirtual_units=\"10\"\ncapacity=16\n",quote(world),"cc".repeat(32))
 }
+
 fn bootstrap_world(cfg: &Path, pin: &Path) -> Output {
     Command::new(env!("CARGO_BIN_EXE_raiv-agent"))
         .args(["init-world", "--pin"])
@@ -107,6 +119,7 @@ fn bootstrap_world(cfg: &Path, pin: &Path) -> Output {
         .output()
         .unwrap()
 }
+
 fn select_main_pin(file: &Path, dir: &Path, root: &str, revision: u64) {
     let bytes = fs::read(dir.join("raiv-manifest.cbor")).unwrap();
     fs::write(
@@ -118,6 +131,7 @@ fn select_main_pin(file: &Path, dir: &Path, root: &str, revision: u64) {
     )
     .unwrap();
 }
+
 fn accept_finish(module: &[u8], dir: &Path, profile: MemoryProfile) -> String {
     use minicbor::encode::Write;
     use raiv::{
@@ -250,6 +264,7 @@ fn accept_finish(module: &[u8], dir: &Path, profile: MemoryProfile) -> String {
         .root
         .to_string()
 }
+
 #[test]
 fn scripted_profile_factory_equals_independent_pinned_metadata() {
     let definitions: serde_json::Value =
@@ -265,6 +280,7 @@ fn scripted_profile_factory_equals_independent_pinned_metadata() {
         );
     }
 }
+
 #[test]
 fn executable_help_and_invalid_commands_are_bounded_without_configuration_io() {
     let result = Command::new(env!("CARGO_BIN_EXE_raiv-agent"))
@@ -279,6 +295,7 @@ fn executable_help_and_invalid_commands_are_bounded_without_configuration_io() {
     assert_eq!(result.status.code(), Some(2));
     assert!(String::from_utf8(result.stderr).unwrap().contains("Usage"));
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_executable_world_bootstrap_needs_approved_main_pin_and_status_is_independent_without_reseed(
@@ -375,6 +392,7 @@ fn real_executable_world_bootstrap_needs_approved_main_pin_and_status_is_indepen
         assert_eq!(contents(&world), corrupted);
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_executable_init_status_both_profiles_preserve_namespace_and_refuse_rebinding_repair_or_bad_pins(

@@ -1,5 +1,6 @@
 //! Owns registered RAM reply advancement and staged local effects, not CommitCandidate
 //! construction, provider JSON/error-message transport or host acceptance/dispatch.
+
 use super::{
     Activation, ActivationError, InferenceError, ModelReply, RamDecision, RamProgress,
     RequestBinding,
@@ -19,6 +20,7 @@ struct Work {
     value: Option<ModelValue>,
     decision: Option<RamDecision>,
 }
+
 impl Work {
     fn result(&self) -> &[u8] {
         if let Some(value) = &self.value {
@@ -30,6 +32,7 @@ impl Work {
         }
     }
 }
+
 impl Activation<'_> {
     /// Core-owned call counts plus nullable exact reported cost sums. Reservations are
     /// deliberately not invented bills; unknown+known remains unknown, never zero.
@@ -41,9 +44,11 @@ impl Activation<'_> {
             ..self.usage_costs
         }
     }
+
     pub fn ram_decision(&self) -> Option<&RamDecision> {
         self.ram_decision.as_ref()
     }
+
     /// Complete matching replies may invoke at most one registered capability. This RAM
     /// milestone returns sealed planned Command/Finish data, NOT a CommitCandidate.
     /// Stale correlations preserve all RAM; matching malformed/fatal errors fail the run.
@@ -76,6 +81,7 @@ impl Activation<'_> {
         }
         result
     }
+
     fn advance_reply(&mut self, reply: &ModelReply<'_>) -> Result<RamProgress, ActivationError> {
         let reported = reply.usage();
         let costs = if self.reported_costs {
@@ -126,7 +132,7 @@ impl Activation<'_> {
                     return self.correct(
                         reply,
                         Some(call.arguments_bytes()),
-                        "invalid_patch",
+                        error.feedback(),
                         false,
                     );
                 }
@@ -151,7 +157,7 @@ impl Activation<'_> {
                         CodecError::AllocationFailure,
                     ))
                     | ActivationError::Codec(CodecError::AllocationFailure) => return Err(error),
-                    ActivationError::Patch(_) => "invalid_patch",
+                    ActivationError::Patch(error) => error.feedback(),
                     ActivationError::Command(_) => "invalid_command",
                     _ => "tool_error",
                 };
@@ -182,6 +188,7 @@ impl Activation<'_> {
         self.next_request()?;
         Ok(RamProgress::InferAgain)
     }
+
     /// A complete normalized no-call reply is an intrinsic control decision, not a
     /// fabricated tool invocation. Stage all RAM output before sealing; errors remain fatal.
     fn finish_reply(&mut self, reply: &ModelReply<'_>) -> Result<RamProgress, ActivationError> {
@@ -205,6 +212,7 @@ impl Activation<'_> {
         self.ram_decision = Some(RamDecision::Finish);
         Ok(RamProgress::Sealed)
     }
+
     fn request_tools(&self) -> impl Iterator<Item = crate::definition::ToolDescriptorView<'_>> {
         super::runtime::enabled_controls(
             self.snapshot.definition(),
@@ -215,6 +223,7 @@ impl Activation<'_> {
             self.policy.quotes,
         )
     }
+
     fn work(
         &self,
         tool: BoundTool<'_>,
@@ -303,6 +312,7 @@ impl Activation<'_> {
         }
         Ok(work)
     }
+
     fn correct(
         &mut self,
         reply: &ModelReply<'_>,
@@ -329,6 +339,7 @@ impl Activation<'_> {
         self.next_request()?;
         Ok(RamProgress::InferAgain)
     }
+
     fn next_request(&mut self) -> Result<(), ActivationError> {
         self.units
             .check(self.session.budget().binding(), self.policy.quotes.model)
@@ -351,6 +362,7 @@ impl Activation<'_> {
         Ok(())
     }
 }
+
 fn add(old: Option<u64>, new: Option<u64>) -> Result<Option<u64>, ActivationError> {
     match (old, new) {
         (Some(a), Some(b)) => Ok(Some(

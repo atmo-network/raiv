@@ -26,6 +26,7 @@ pub struct ExecutionQuotes {
     pub yield_tool: u64,
     pub finish: u64,
 }
+
 impl ExecutionQuotes {
     pub(super) fn control(self, control: ToolControl) -> u64 {
         match control {
@@ -35,11 +36,13 @@ impl ExecutionQuotes {
         }
     }
 }
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RunPolicy {
     pub caller: Limits,
     pub quotes: ExecutionQuotes,
 }
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ActivationError {
     Prepared(PrepareError),
@@ -56,31 +59,37 @@ pub enum ActivationError {
     Command(crate::command::CommandError),
     UsageOverflow,
 }
+
 impl From<PrepareError> for ActivationError {
     fn from(e: PrepareError) -> Self {
         Self::Prepared(e)
     }
 }
+
 impl From<InferenceError> for ActivationError {
     fn from(e: InferenceError) -> Self {
         Self::Inference(e)
     }
 }
+
 impl From<ProjectionError> for ActivationError {
     fn from(e: ProjectionError) -> Self {
         Self::Projection(e)
     }
 }
+
 impl From<MemoryError> for ActivationError {
     fn from(e: MemoryError) -> Self {
         Self::Memory(e)
     }
 }
+
 impl From<CodecError> for ActivationError {
     fn from(e: CodecError) -> Self {
         Self::Codec(e)
     }
 }
+
 impl fmt::Display for ActivationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -104,6 +113,7 @@ impl fmt::Display for ActivationError {
         })
     }
 }
+
 impl core::error::Error for ActivationError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
@@ -120,6 +130,7 @@ impl core::error::Error for ActivationError {
         }
     }
 }
+
 /// Preparation failure returns the unspent instance sequence, never resets its last ID.
 /// The host retains canonical input/blocks/anchor for retry; no candidate is produced.
 #[derive(Debug, Eq, PartialEq)]
@@ -152,6 +163,7 @@ pub struct Activation<'tools> {
     pub(super) reported_costs: bool,
     pub(super) ram_decision: Option<super::RamDecision>,
 }
+
 /// All data preflights/allocations occur before the first count/nonce/unit reservation.
 /// The registry must borrow independent compiled metadata, not fields of the snapshot
 /// being moved here. The wrapper itself is not borrowed by the returned Activation.
@@ -267,6 +279,7 @@ pub fn prepare<'tools>(
         ram_decision: None,
     })
 }
+
 impl<'tools> Activation<'tools> {
     /// Borrow the same pending request repeatedly: no inference, allocation or new debit.
     pub fn request(&self) -> Result<ModelRequest<'_>, ActivationError> {
@@ -285,35 +298,45 @@ impl<'tools> Activation<'tools> {
             caller: &self.policy.caller,
         })
     }
+
     pub fn snapshot(&self) -> &RestoredAgent {
         &self.snapshot
     }
+
     pub fn input(&self) -> &PreparedInput {
         &self.input
     }
+
     pub fn working_memory(&self) -> Option<&Memory> {
         self.memory.as_ref()
     }
+
     pub fn initial_prefix(&self) -> &[u8] {
         self.prefix.as_bytes()
     }
+
     pub fn trajectory_bytes(&self) -> &[u8] {
         self.trajectory.as_bytes()
     }
+
     pub fn session(&self) -> &InferenceSession {
         &self.session
     }
+
     pub fn units(&self) -> &UnitBudget {
         &self.units
     }
+
     pub fn registered_tools(&self) -> &ToolSet<'tools> {
         &self.tools
     }
+
     /// Terminal extraction preserves instance IDs for retry/next admission; candidate
     /// acceptance must be resolved by the host before starting another Activation.
     pub fn release_sequence(&mut self) -> Result<RequestSequence, ActivationError> {
         Ok(self.session.release_sequence()?)
     }
+
     /// Matching failure spends no new slot/unit and produces no candidate. Wrong keys
     /// preserve the live request; actual failure seals against subsequent request views.
     pub fn inference_error(&mut self, binding: RequestBinding) -> Result<(), ActivationError> {
@@ -321,6 +344,7 @@ impl<'tools> Activation<'tools> {
         Ok(())
     }
 }
+
 /// Borrowed initial model request under the supplied trusted policy. Provider JSON/SSE,
 /// actual model/profile authorization and transport bounds are native adapter duties.
 pub struct ModelRequest<'a> {
@@ -333,28 +357,35 @@ pub struct ModelRequest<'a> {
     limits: &'a Limits,
     caller: &'a Limits,
 }
+
 impl<'a> ModelRequest<'a> {
     pub fn binding(&self) -> RequestBinding {
         self.binding
     }
+
     pub fn projection_version(&self) -> u64 {
         1
     }
+
     pub fn context_bytes(&self) -> &'a [u8] {
         self.context
     }
+
     /// Exact bounded canonical Definition model-parameter Map, never provider overrides.
     pub fn model_parameters_bytes(&self) -> &'a [u8] {
         self.definition.inference_profile_bytes()
     }
+
     /// Tightened operational ceilings; history_episodes retains Definition's policy.
     /// The distinct raw caller materialization/history capacity remains available below.
     pub fn limits(&self) -> &'a Limits {
         self.limits
     }
+
     pub fn caller_limits(&self) -> &'a Limits {
         self.caller
     }
+
     /// Metadata has already matched every registered implementation at preparation.
     /// Enabled views preserve Definition order; declared-prefix data is not a dispatch list.
     pub fn tools(&self) -> impl Iterator<Item = ToolDescriptorView<'a>> + 'a {
@@ -368,6 +399,7 @@ impl<'a> ModelRequest<'a> {
         )
     }
 }
+
 pub(super) fn enabled_controls(
     definition: &crate::definition::Definition,
     counts: super::CallCounts,
@@ -384,6 +416,7 @@ pub(super) fn enabled_controls(
             }
     })
 }
+
 fn effective_limits(d: &Limits, c: &Limits) -> Limits {
     Limits {
         max_memory_bytes: d.max_memory_bytes.min(c.max_memory_bytes),

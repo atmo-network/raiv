@@ -1,24 +1,29 @@
 use super::*;
 use crate::{disk::tests::Directory, simulator::tests::entry};
 use ciborium::value::Value;
+
 fn caps() -> ExecutorLimits {
     ExecutorLimits {
         wire: DecodeLimits::default(),
         max_actions: 8,
     }
 }
+
 fn decode(bytes: &[u8]) -> Value {
     ciborium::de::from_reader(bytes).unwrap()
 }
+
 fn encode(v: &Value) -> Vec<u8> {
     let mut b = Vec::new();
     ciborium::ser::into_writer(v, &mut b).unwrap();
     b
 }
+
 fn fields(v: &mut Value) -> &mut Vec<Value> {
     let Value::Array(v) = v else { panic!() };
     v
 }
+
 fn frame(status: Status, initial: u64, debit: u64, outcome: Outcome) -> WorldState {
     let mut e = entry(1, 1);
     if status != Status::Ready {
@@ -48,6 +53,7 @@ fn frame(status: Status, initial: u64, debit: u64, outcome: Outcome) -> WorldSta
     let ledger = ExecutorCheckpoint::test_frame(e.anchor.agent_id, e.program, &[&e], &caps(), None);
     WorldState::compose([7; 32], initial, ledger, &caps()).unwrap()
 }
+
 #[test]
 fn conservation_known_debits_and_unknown_reservations_exact_oracle_full_u64() {
     for (status, debit, outcome, used) in [
@@ -69,6 +75,7 @@ fn conservation_known_debits_and_unknown_reservations_exact_oracle_full_u64() {
         assert!(WorldState::decode(&encode(&wrong), &caps()).is_err());
     }
 }
+
 #[test]
 fn malformed_header_inner_state_costs_stamp_caps_and_underflow_fail_closed() {
     let state = frame(Status::Terminal, 1, 1, Outcome::Succeeded);
@@ -121,6 +128,7 @@ fn malformed_header_inner_state_costs_stamp_caps_and_underflow_fail_closed() {
     extra.push(0);
     assert!(WorldState::decode(&extra, &caps()).is_err());
 }
+
 #[test]
 fn independent_world_slot_cas_unknown_acknowledgement_and_reopen_keep_whole_effect_receipt() {
     let directory = Directory::new();

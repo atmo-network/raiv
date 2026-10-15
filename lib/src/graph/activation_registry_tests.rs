@@ -1,4 +1,5 @@
 //! Registry-wrapper lifetime is independent of retained Activation; metadata still borrows.
+
 use super::*;
 use crate::{
     activation::{prepare, Activation, InferenceError, RamProgress, RequestSequence},

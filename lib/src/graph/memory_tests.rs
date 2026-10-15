@@ -5,9 +5,11 @@ fn check_memory(blocks: &Store, root: DaslCid) -> Result<(), GraphError> {
         .unwrap()
         .check_memory_consistency()
 }
+
 fn text(value: &str) -> Cbor {
     Cbor::Text(value.into())
 }
+
 pub(super) fn new_memory(blocks: &mut Store, witness: &str) -> DaslCid {
     let bytes = encode(&Cbor::Map(vec![
         (text("kind"), text("memory")),
@@ -24,6 +26,7 @@ pub(super) fn new_memory(blocks: &mut Store, witness: &str) -> DaslCid {
     blocks.0.insert(cid, bytes);
     cid
 }
+
 fn retarget_episode(blocks: &mut Store, root: DaslCid, old: DaslCid, next: DaslCid) -> DaslCid {
     let state = AgentState::decode(blocks.get(root).unwrap(), &DecodeLimits::default()).unwrap();
     let history = state

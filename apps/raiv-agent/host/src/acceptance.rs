@@ -1,4 +1,5 @@
 //! Native RAM/local-file boundary transaction roots. Neither grants a dispatch permit.
+
 use crate::{
     admission::{AdmissionBook, AdmissionError, AdmissionStatus, AdmittedInput},
     registry::{Anchor, Registry},
@@ -7,10 +8,13 @@ use crate::{
 };
 use raiv::limits::Limits;
 use std::fmt;
+
 #[cfg(target_os = "linux")]
 mod local;
+
 #[cfg(target_os = "linux")]
 pub use local::{accept_local, LocalAcceptanceError};
+
 #[derive(Debug)]
 pub enum AcceptanceError {
     UnknownAgent,
@@ -20,6 +24,7 @@ pub enum AcceptanceError {
     Admission(AdmissionError),
     Readback(StoreError),
 }
+
 impl fmt::Display for AcceptanceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -32,7 +37,9 @@ impl fmt::Display for AcceptanceError {
         })
     }
 }
+
 impl std::error::Error for AcceptanceError {}
+
 /// Only for isolated local RAM computation. Complete readback binds the required bytes;
 /// it is not the durable readiness policy required before real effect dispatch.
 /// Exclusive mutable registry/book access makes the following in-memory assignments

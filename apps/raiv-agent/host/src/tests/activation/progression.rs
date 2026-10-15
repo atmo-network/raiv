@@ -1,11 +1,14 @@
 //! Retained RAM and fixed checkpoint DATA in the guest, never canonical host acceptance.
+
 use super::*;
+
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
         .step_by(2)
         .map(|i| u8::from_str_radix(&text[i..i + 2], 16).unwrap())
         .collect()
 }
+
 pub(super) fn call(tool: &str, args: Value) -> Value {
     map(vec![
         ("call_id", Value::Text("GUEST_RAM_ONLY_NATIVE_ID".into())),
@@ -13,6 +16,7 @@ pub(super) fn call(tool: &str, args: Value) -> Value {
         ("arguments", args),
     ])
 }
+
 pub(super) fn reply(outer: u64, body: u64, calls: Vec<Value>) -> Vec<u8> {
     envelope(
         "inference_reply",
@@ -39,6 +43,7 @@ pub(super) fn reply(outer: u64, body: u64, calls: Vec<Value>) -> Vec<u8> {
         ]),
     )
 }
+
 fn sections(response: &[u8]) -> Vec<Value> {
     let decoded = decode(response);
     let Value::Bytes(bytes) = field(field(field(&decoded, "payload"), "request"), "context") else {
@@ -49,21 +54,25 @@ fn sections(response: &[u8]) -> Vec<Value> {
     };
     sections
 }
+
 fn infer_id(response: &[u8]) -> Value {
     field(field(&decode(response), "payload"), "request_id").clone()
 }
+
 fn candidate(response: &[u8]) -> Value {
     let decoded = decode(response);
     assert_eq!(field(&decoded, "type"), &Value::Text("boundary".into()));
     assert_eq!(encode(&decoded), response);
     field(field(&decoded, "payload"), "candidate").clone()
 }
+
 fn blocks(candidate: &Value) -> Vec<Value> {
     let Value::Array(blocks) = field(candidate, "new_blocks") else {
         panic!()
     };
     blocks.clone()
 }
+
 fn tag_cid(value: &Value) -> &[u8] {
     let Value::Tag(42, payload) = value else {
         panic!()
@@ -74,12 +83,14 @@ fn tag_cid(value: &Value) -> &[u8] {
     assert_eq!(bytes[0], 0);
     &bytes[1..]
 }
+
 fn body(block: &Value) -> Value {
     let Value::Bytes(bytes) = field(block, "body") else {
         panic!()
     };
     decode(bytes)
 }
+
 fn usage(candidate: &Value) -> Value {
     let boundary = blocks(candidate)
         .into_iter()
@@ -87,6 +98,7 @@ fn usage(candidate: &Value) -> Value {
         .unwrap();
     field(&body(&boundary), "usage").clone()
 }
+
 fn lifecycle(mut step: impl FnMut(&[u8]) -> Vec<u8>) {
     let fixture: serde_json::Value = serde_json::from_str(include_str!(
         "../../../../../../fixtures/format/lifecycle.json"
@@ -223,9 +235,11 @@ fn lifecycle(mut step: impl FnMut(&[u8]) -> Vec<u8>) {
         step(&[]);
     }
 }
+
 fn fixture_value(value: &serde_json::Value) -> Value {
     fixture(value)
 }
+
 #[test]
 fn native_retained_patch_yield_finish_and_fresh_instance_recovery_match_six_independent_checkpoint_witnesses(
 ) {
@@ -239,6 +253,7 @@ fn native_retained_patch_yield_finish_and_fresh_instance_recovery_match_six_inde
         }
     });
 }
+
 fn correction_and_finish(mut step: impl FnMut(&[u8]) -> Vec<u8>) {
     let initial = step(&activate(&genesis(1), &packet()));
     let prefix = sections(&initial);
@@ -276,12 +291,14 @@ fn correction_and_finish(mut step: impl FnMut(&[u8]) -> Vec<u8>) {
         .iter()
         .all(|b| field(&body(b), "kind") != &Value::Text("memory".into())));
 }
+
 #[test]
 fn all_multiple_calls_correct_before_memory_or_finish_and_explicit_finish_reuses_surviving_memory()
 {
     let mut guest = guest::Guest::new();
     correction_and_finish(|input| guest.step(input).unwrap());
 }
+
 #[test]
 fn no_effect_patch_spends_work_and_finish_preserves_memory_while_disabled_profile_has_no_memory() {
     for profile in [0, 1] {
@@ -329,6 +346,7 @@ fn no_effect_patch_spends_work_and_finish_preserves_memory_while_disabled_profil
         }
     }
 }
+
 #[test]
 fn matching_malformed_normalized_reply_is_fatal_but_outer_malformed_frames_preserve_pending() {
     let mut guest = guest::Guest::new();
@@ -347,6 +365,7 @@ fn matching_malformed_normalized_reply_is_fatal_but_outer_malformed_frames_prese
         "wrong_inference_request"
     );
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn real_wasm_retained_progression_and_data_recovery_equal_native_and_independent_golden_candidates()
@@ -375,6 +394,7 @@ fn real_wasm_retained_progression_and_data_recovery_equal_native_and_independent
         actual
     });
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn mid_live_vm_fuel_or_allocation_failure_discards_instance_without_boundary() {

@@ -1,4 +1,5 @@
 //! Native-approved synthetic unit settlement, never provider-selected tool semantics or live effects.
+
 use super::{
     bounds,
     config::{id, Config},
@@ -30,11 +31,13 @@ use raiv_agent_host::{
     },
 };
 use std::{path::Path, str::FromStr};
+
 pub struct Execute<'a> {
     pub plan: &'a Path,
     pub pin: &'a Path,
     pub world_digest: &'a str,
 }
+
 struct Plan {
     action: [u8; 32],
     digest: [u8; 32],
@@ -42,12 +45,14 @@ struct Plan {
     debit: u64,
     result: Vec<u8>,
 }
+
 impl Plan {
     fn load(path: &Path) -> Result<Self> {
         let bytes = read_bounded(path, 16384)?;
         let source = std::str::from_utf8(&bytes).map_err(|_| fail("plan must be UTF-8"))?;
         Self::parse(source)
     }
+
     fn parse(source: &str) -> Result<Self> {
         let data = toml::Table::from_str(source).map_err(|_| fail("invalid native-plan TOML"))?;
         let keys = [
@@ -109,6 +114,7 @@ impl Plan {
         })
     }
 }
+
 pub(super) fn pending<'a>(source: &'a RestoredAgent, caller: &Limits) -> Result<CommandView<'a>> {
     let episode = source
         .current_episode()
@@ -125,6 +131,7 @@ pub(super) fn pending<'a>(source: &'a RestoredAgent, caller: &Limits) -> Result<
     };
     Ok(CommandView::decode(bytes, caller)?)
 }
+
 pub fn execute(
     config: &Config,
     definition: &Definition,
@@ -246,12 +253,15 @@ pub fn execute(
     Ok(format!("mode=scripted-terminal-ledger\nroot={}\nrevision={}\naction_id={}\ncommand_digest={}\nsubmission_intents={}\nvirtual_units_available={}\nledger_rows={}\nreceipt_hex={}\nexecution=synthetic-unit-counter-only; no market/portfolio/wake/backend permission\nnext-pin=requires-independent-current-world-selection\n",
         reg.anchor().root,reg.anchor().revision,hex(&record.action_id),hex(&record.command_digest),record.submission_intents,world.state().available_units(),world.state().ledger().records().count(),receipt_hex))
 }
+
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn native_plan_is_closed_exact_and_cannot_infer_refund_from_unknown() {
         let good=format!("action_id=\"{}\"\ncommand_digest=\"{}\"\noutcome=\"failed\"\ndebit=\"1\"\nresult_hex=\"a0\"\n","01".repeat(32),"02".repeat(32));

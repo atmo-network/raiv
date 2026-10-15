@@ -5,11 +5,13 @@ fn history(blocks: &Store, root: DaslCid) -> Result<(), GraphError> {
         .unwrap()
         .check_history_consistency()
 }
+
 fn revision(blocks: &mut Store, root: DaslCid, revision: u64) -> DaslCid {
     patch(blocks, root, |r| {
         map_mut(r).insert("revision".into(), Cbor::Integer(revision.into()));
     })
 }
+
 fn window(blocks: &mut Store, root: DaslCid, window: u64) -> DaslCid {
     let state = AgentState::decode(blocks.get(root).unwrap(), &DecodeLimits::default()).unwrap();
     let definition = patch(blocks, state.definition_link(), |r| {
@@ -20,6 +22,7 @@ fn window(blocks: &mut Store, root: DaslCid, window: u64) -> DaslCid {
         map_mut(r).insert("definition".into(), link(definition));
     })
 }
+
 pub(super) fn completed_pair() -> (Store, DaslCid) {
     let fixture = &roles()[0];
     let (mut blocks, episode_cid, episode) = episode_for(fixture);

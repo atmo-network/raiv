@@ -2,6 +2,7 @@ use super::*;
 
 #[path = "identity_tests.rs"]
 mod identities;
+
 use crate::episode::Episode;
 use crate::format::oracle::{encode, link, map_mut};
 use ciborium::value::Value as Cbor;
@@ -10,6 +11,7 @@ use core::cell::Cell;
 fn roles() -> Value {
     serde_json::from_str(include_str!("../../../fixtures/format/roles.json")).unwrap()
 }
+
 fn patch(blocks: &mut Store, cid: DaslCid, edit: impl FnOnce(&mut Cbor)) -> DaslCid {
     let mut record: Cbor = ciborium::de::from_reader(blocks.get(cid).unwrap()).unwrap();
     edit(&mut record);
@@ -18,6 +20,7 @@ fn patch(blocks: &mut Store, cid: DaslCid, edit: impl FnOnce(&mut Cbor)) -> Dasl
     blocks.0.insert(next, bytes);
     next
 }
+
 fn episode_change(fixture: &Value, edit: impl FnOnce(&mut Cbor)) -> (Store, DaslCid, DaslCid) {
     let mut blocks = store(fixture);
     let state = AgentState::decode(
@@ -39,11 +42,13 @@ fn episode_change(fixture: &Value, edit: impl FnOnce(&mut Cbor)) -> (Store, Dasl
     });
     (blocks, next_root, next)
 }
+
 fn check(blocks: &Store, root: DaslCid) -> Result<(), GraphError> {
     InspectedClosure::inspect(root, blocks, &Limits::default())
         .unwrap()
         .check_episode_roles()
 }
+
 fn episode_for(fixture: &Value) -> (Store, DaslCid, Episode) {
     let blocks = store(fixture);
     let state = AgentState::decode(

@@ -4,7 +4,7 @@ Living index of project design documentation. The [backlog](../BACKLOG.md) owns 
 
 ## Documents
 
-- [Raiv 0.0.1 specification](raiv.spec.en.md): Normative portable-library, lifecycle, isolated WASM guest/native-host ABI, minimal terminal frontend, inference and availability requirements. This is a design contract, not a report of implemented behavior.
+- [Raiv 0.0.2 specification](raiv.spec.en.md): Normative portable-library, lifecycle, isolated WASM guest/native-host ABI, minimal terminal frontend, inference and availability requirements. This is a design contract, not a report of implemented behavior.
 - [DASL Content IDs](cid.spec.en.md): Restricted CID profile, parsing and IPFS relationship; upstream snapshot dated 2026-10-01.
 - [DRISL](drisl.spec.en.md): Deterministic CBOR representation and tag-42 links; upstream snapshot dated 2026-10-01.
 - [CAR](car.spec.en.md): Content-addressable archive framing, headers and conformance; upstream snapshot dated 2026-10-01.

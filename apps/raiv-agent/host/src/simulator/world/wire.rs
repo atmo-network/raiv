@@ -1,14 +1,18 @@
 //! Closed world codec: canonical header and ALL nested ledger/cost/conservation checks
 //! precede ledger payload ownership. Costs are known synthetic units only, never money.
+
 use super::*;
 use minicbor::{encode::Write, Decoder, Encoder};
 use raiv::format::validate_drisl;
+
 struct Writer {
     bytes: Vec<u8>,
     max: u64,
 }
+
 impl Write for Writer {
     type Error = WorldError;
+
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), WorldError> {
         if self
             .bytes
@@ -25,9 +29,11 @@ impl Write for Writer {
         Ok(())
     }
 }
+
 fn error(e: minicbor::encode::Error<WorldError>) -> WorldError {
     e.into_write().unwrap_or(WorldError::Schema)
 }
+
 pub(super) fn costs(units: u64) -> Result<Vec<u8>, WorldError> {
     let mut e = Encoder::new(Writer {
         bytes: Vec::new(),
@@ -39,6 +45,7 @@ pub(super) fn costs(units: u64) -> Result<Vec<u8>, WorldError> {
         .map_err(error)?;
     Ok(e.into_writer().bytes)
 }
+
 pub(super) fn used(
     ledger: &checkpoint::ExecutorCheckpointView<'_>,
     wire: &DecodeLimits,
@@ -87,6 +94,7 @@ pub(super) fn used(
     }
     Ok(used)
 }
+
 pub(super) fn encode(state: &WorldState, limits: &ExecutorLimits) -> Result<Vec<u8>, WorldError> {
     let view = ExecutorCheckpoint::borrowed(state.ledger.as_bytes(), limits)
         .map_err(WorldError::Checkpoint)?;
@@ -113,6 +121,7 @@ pub(super) fn encode(state: &WorldState, limits: &ExecutorLimits) -> Result<Vec<
     validate_drisl(&bytes, &limits.wire).map_err(WorldError::Codec)?;
     Ok(bytes)
 }
+
 pub(super) fn decode(bytes: &[u8], limits: &ExecutorLimits) -> Result<WorldState, WorldError> {
     validate_drisl(bytes, &limits.wire).map_err(WorldError::Codec)?;
     let mut d = Decoder::new(bytes);

@@ -17,6 +17,7 @@ cat > "$TEST/bin/cargo" <<'EOF'
 #!/usr/bin/env bash
 set -eu
 [[ ! ${OPENCODE_API_KEY+x} ]] || exit 91
+[[ ! ${EXAMPLE_PROVIDER_KEY+x} ]] || exit 93
 printf 'cargo:%s\n' "$1" >> "$LAUNCHER_TEST_TRACE"
 EOF
 cat > "$TEST/build/debug/raiv-agent" <<'EOF'
@@ -68,11 +69,13 @@ export OPENCODE_API_KEY=launcher-private-test-token
 SESSION="$TEST/session with spaces"
 pty run "$SESSION" "$TEST/first.log"
 grep -q 'mock-interactive=started' "$TEST/first.log"
-grep -Fxq 'max_tokens = 1024' "$SESSION/config.toml"
-grep -q 'Defaults: var/raiv/chat; 1024 tokens' "$TEST/help.log"
+grep -Fxq 'max_tokens = 4096' "$SESSION/config.toml"
+grep -Fxq 'timeout_ms = 60000' "$SESSION/config.toml"
+grep -q 'New-session defaults: var/raiv/chat; 20 prompts/launch' "$TEST/help.log"
+grep -q 'Plan: 20 prompts, <=3 calls/prompt, 4096 tokens/60s per call, actions=0.' "$TEST/first.log"
 grep -Fxq 'remaining_model_calls = "3"' "$SESSION/grants.toml"
 grep -Fxq 'remaining_actions = "0"' "$SESSION/grants.toml"
-grep -Fxq 'max_events = "2"' "$SESSION/grants.toml"
+grep -Fxq 'max_events = "20"' "$SESSION/grants.toml"
 BEFORE=$(sha256sum < "$SESSION/blocks/raiv-manifest.cbor")
 pty run "$SESSION" "$TEST/reopen.log"
 [[ $(grep -c '^init$' "$LAUNCHER_TEST_TRACE") == 1 && $(grep -c '^init-world$' "$LAUNCHER_TEST_TRACE") == 1 ]]
@@ -83,13 +86,19 @@ unset LAUNCHER_TEST_UNRESOLVED
 [[ $(grep -c '^interactive$' "$LAUNCHER_TEST_TRACE") == 2 ]]
 if pty no "$SESSION" "$TEST/declined.log"; then exit 1; fi
 [[ $(grep -c '^interactive$' "$LAUNCHER_TEST_TRACE") == 2 ]]
+# A newer build never rebinds or orphans a session: it keeps running its own pinned guest.
 printf 'changed-guest' > "$TEST/build/wasm32v1-none/release/raiv_agent.wasm"
-if pty run "$SESSION" "$TEST/changed-guest.log"; then exit 1; fi
+pty run "$SESSION" "$TEST/changed-guest.log"
+grep -q 'keeps its own pinned guest' "$TEST/changed-guest.log"
+grep -q 'mock-interactive=started' "$TEST/changed-guest.log"
+cmp -s <(printf 'mock-guest') "$SESSION/guest.wasm"
 printf 'mock-guest' > "$TEST/build/wasm32v1-none/release/raiv_agent.wasm"
-printf '# changed\n' >> "$SESSION/grants.toml"
-if pty run "$SESSION" "$TEST/changed-plan.log"; then exit 1; fi
+# The approval prompt shows the session's own plan, never the launcher's newer defaults.
 printf '%s\n' 'activation_units = "100"' 'remaining_episode_units = "100"' \
     'remaining_model_calls = "3"' 'remaining_actions = "0"' 'max_events = "2"' > "$SESSION/grants.toml"
+if pty no "$SESSION" "$TEST/older-plan.log"; then exit 1; fi
+grep -q 'Plan: 2 prompts, <=3 calls/prompt' "$TEST/older-plan.log"
+[[ $(grep -c '^interactive$' "$LAUNCHER_TEST_TRACE") == 3 ]]
 FRESH_DECLINED="$TEST/fresh-declined"
 if pty no "$FRESH_DECLINED" "$TEST/fresh-declined.log"; then exit 1; fi
 [[ -f $FRESH_DECLINED/blocks/raiv-manifest.cbor && ! -e $FRESH_DECLINED/world/raiv-world.cbor ]]
@@ -100,8 +109,38 @@ if pty run "$SESSION" "$TEST/changed-config.log"; then exit 1; fi
 # DATA inspection is independent of the launcher guard, credential, approval and TTY.
 unset OPENCODE_API_KEY
 bash "$ROOT/run.sh" --status "$SESSION" > "$TEST/status.log"
-[[ $(grep -c '^interactive$' "$LAUNCHER_TEST_TRACE") == 2 ]]
-if grep -R -F -q 'launcher-private-test-token' "$TEST" --exclude='test-run.sh'; then
+[[ $(grep -c '^interactive$' "$LAUNCHER_TEST_TRACE") == 3 ]]
+# A NEW session may select any OpenAI-compatible endpoint with its own credential variable.
+export OPENCODE_API_KEY=launcher-private-test-token RAIV_PROVIDER=openai-compatible \
+    RAIV_BASE_URL=https://api.example.com/v1 RAIV_MODEL=qwen3.8-flash RAIV_API_KEY_ENV=EXAMPLE_PROVIDER_KEY
+GENERIC="$TEST/generic"
+if pty run "$GENERIC" "$TEST/generic-no-key.log"; then exit 1; fi
+[[ ! -e $GENERIC ]]
+grep -q 'Export EXAMPLE_PROVIDER_KEY first' "$TEST/generic-no-key.log"
+export EXAMPLE_PROVIDER_KEY=generic-private-test-token
+RAIV_BASE_URL='https://api.example.com/v1?key=x' pty run "$TEST/generic-bad-url" "$TEST/generic-bad-url.log" && exit 1
+pty run "$GENERIC" "$TEST/generic.log"
+grep -q 'mock-interactive=started' "$TEST/generic.log"
+grep -q 'Raiv — openai-compatible / qwen3.8-flash (LOCAL TEST)' "$TEST/generic.log"
+grep -Fxq 'provider = "openai-compatible"' "$GENERIC/config.toml"
+grep -Fxq 'api_key_env = "EXAMPLE_PROVIDER_KEY"' "$GENERIC/config.toml"
+grep -Fxq 'model = "qwen3.8-flash"' "$GENERIC/config.toml"
+if grep -q 'reasoning_effort' "$GENERIC/config.toml"; then exit 1; fi
+# Reopening uses the session's own key variable even when the new-session selection changes.
+unset RAIV_PROVIDER RAIV_BASE_URL RAIV_MODEL RAIV_API_KEY_ENV OPENCODE_API_KEY
+pty run "$GENERIC" "$TEST/generic-reopen.log"
+grep -q 'mock-interactive=started' "$TEST/generic-reopen.log"
+unset EXAMPLE_PROVIDER_KEY
+# Selecting only the provider uses the OpenCode endpoint, qwen3.8-flash and OPENCODE_API_KEY.
+export RAIV_PROVIDER=openai-compatible OPENCODE_API_KEY=launcher-private-test-token
+DEFAULTS="$TEST/generic-defaults"
+pty run "$DEFAULTS" "$TEST/generic-defaults.log"
+grep -q 'mock-interactive=started' "$TEST/generic-defaults.log"
+grep -Fxq 'base_url = "https://opencode.ai/zen/go/v1"' "$DEFAULTS/config.toml"
+grep -Fxq 'model = "qwen3.8-flash"' "$DEFAULTS/config.toml"
+grep -Fxq 'api_key_env = "OPENCODE_API_KEY"' "$DEFAULTS/config.toml"
+unset RAIV_PROVIDER OPENCODE_API_KEY
+if grep -R -F -q -e 'launcher-private-test-token' -e 'generic-private-test-token' "$TEST" --exclude='test-run.sh'; then
     printf 'Credential leaked into test output/files.\n' >&2; exit 1
 fi
 printf 'Launcher shell regressions passed; evidence: %s\n' "$TEST"

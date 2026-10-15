@@ -3,27 +3,33 @@ use super::*;
 use ciborium::value::Value;
 use raiv::position::Position;
 use raiv::receipt::{Outcome, ReceiptSpec};
+
 fn caps() -> ExecutorLimits {
     ExecutorLimits {
         wire: DecodeLimits::default(),
         max_actions: 10,
     }
 }
+
 fn encode(v: &Value) -> Vec<u8> {
     let mut b = Vec::new();
     ciborium::ser::into_writer(v, &mut b).unwrap();
     b
 }
+
 fn decode(b: &[u8]) -> Value {
     ciborium::de::from_reader(b).unwrap()
 }
+
 fn elements(v: &mut Value) -> &mut Vec<Value> {
     let Value::Array(a) = v else { panic!() };
     a
 }
+
 fn row(v: &mut Value) -> &mut Vec<Value> {
     elements(&mut elements(&mut elements(v)[4])[0])
 }
+
 fn terminal() -> Entry {
     let mut e = entry(1, 1);
     e.intents = 1;
@@ -53,9 +59,11 @@ fn terminal() -> Entry {
     );
     e
 }
+
 fn frame(e: &Entry) -> Vec<u8> {
     wire::encode(e.anchor.agent_id, e.program, &[e], &caps()).unwrap()
 }
+
 #[test]
 fn ready_submitted_terminal_exact_spans_and_full_u64_match_independent_ciborium_without_capabilities(
 ) {
@@ -90,6 +98,7 @@ fn ready_submitted_terminal_exact_spans_and_full_u64_match_independent_ciborium_
         assert!(!bytes.windows(b"origin".len()).any(|w| w == b"origin"));
     }
 }
+
 #[test]
 fn closed_frames_nested_records_state_and_id_digest_joins_reject_before_frame_ownership() {
     let original = frame(&terminal());
@@ -171,6 +180,7 @@ fn closed_frames_nested_records_state_and_id_digest_joins_reject_before_frame_ow
         assert!(ExecutorCheckpoint::decode(&original, &limits).is_err());
     }
 }
+
 #[test]
 fn canonical_slot_revision_uniqueness_and_only_latest_unresolved_record_are_enforced() {
     let mut a = terminal();

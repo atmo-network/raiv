@@ -1,13 +1,17 @@
 //! Private closed positional metadata codec; no dynamic Value or model encoding.
+
 use super::*;
 use minicbor::{encode::Write, Decoder, Encoder};
 use raiv::{budget::BudgetAdmission, preparation::InputBinding};
+
 struct Writer {
     bytes: Vec<u8>,
     max: u64,
 }
+
 impl Write for Writer {
     type Error = CheckpointError;
+
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), Self::Error> {
         if self
             .bytes
@@ -24,9 +28,11 @@ impl Write for Writer {
         Ok(())
     }
 }
+
 fn err(e: minicbor::encode::Error<CheckpointError>) -> CheckpointError {
     e.into_write().unwrap_or(CheckpointError::Schema)
 }
+
 pub(super) fn encode(
     data: &CheckpointManifest,
     limits: &ManifestLimits,
@@ -93,32 +99,38 @@ pub(super) fn encode(
     validate_drisl(&bytes, &limits.wire).map_err(CheckpointError::Codec)?;
     Ok(bytes)
 }
+
 fn array(d: &mut Decoder<'_>, n: u64) -> Result<(), CheckpointError> {
     if d.array().map_err(|_| CheckpointError::Schema)? != Some(n) {
         return Err(CheckpointError::Schema);
     }
     Ok(())
 }
+
 fn number(d: &mut Decoder<'_>) -> Result<u64, CheckpointError> {
     d.u64().map_err(|_| CheckpointError::Schema)
 }
+
 fn id(d: &mut Decoder<'_>) -> Result<[u8; 32], CheckpointError> {
     d.bytes()
         .map_err(|_| CheckpointError::Schema)?
         .try_into()
         .map_err(|_| CheckpointError::Schema)
 }
+
 fn cid(d: &mut Decoder<'_>) -> Result<DaslCid, CheckpointError> {
     DaslCid::from_bytes(d.bytes().map_err(|_| CheckpointError::Schema)?)
         .and_then(DaslCid::require_state)
         .map_err(|_| CheckpointError::Schema)
 }
+
 fn text(d: &mut Decoder<'_>, expected: &str) -> Result<(), CheckpointError> {
     if d.str().map_err(|_| CheckpointError::Schema)? != expected {
         return Err(CheckpointError::Schema);
     }
     Ok(())
 }
+
 fn count(d: &mut Decoder<'_>, max: u64) -> Result<usize, CheckpointError> {
     let n = d
         .array()
@@ -129,6 +141,7 @@ fn count(d: &mut Decoder<'_>, max: u64) -> Result<usize, CheckpointError> {
     }
     usize::try_from(n).map_err(|_| CheckpointError::Limit)
 }
+
 pub(super) fn decode(
     bytes: &[u8],
     limits: &ManifestLimits,

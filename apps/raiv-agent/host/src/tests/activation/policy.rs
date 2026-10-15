@@ -10,6 +10,7 @@ use crate::{
     registry::Registry,
 };
 use raiv::{format::DecodeLimits, limits::Limits};
+
 fn caps() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -17,6 +18,7 @@ fn caps() -> ManifestLimits {
         max_admissions: 10,
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn baseline_to_committed_current_pin_comes_only_from_matching_approved_head_book_and_old_pin_cannot_select_new_file(

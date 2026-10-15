@@ -1,15 +1,15 @@
 //! Native bounded HTTPS Chat Completions transport. No context construction, guest decisions or admission.
-mod diagnostic;
+
 use super::{
     json, normalize_chat_completion,
     sse::{ChatCompletionStream, StreamError, StreamLimits},
     NormalizedReply,
 };
-pub use diagnostic::{Diagnostic, DiagnosticKind, DiagnosticParameter};
 use raiv::{format::DecodeLimits, limits::Limits};
 use serde_json::Value;
 use std::{fmt, io::Read, time::Duration};
 use ureq::http::{header, HeaderMap, HeaderValue, Uri};
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ClientError {
     Configuration,
@@ -25,6 +25,7 @@ pub enum ClientError {
     CredentialEcho,
     Allocation,
 }
+
 impl fmt::Display for ClientError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = match self {
@@ -52,7 +53,9 @@ impl fmt::Display for ClientError {
         f.write_str(message)
     }
 }
+
 impl std::error::Error for ClientError {}
+
 /// Explicit native policy, not model-provided endpoint/credential discovery. No credential value here.
 #[derive(Clone)]
 pub struct ProviderConfig {
@@ -68,6 +71,7 @@ pub struct ProviderConfig {
     pub timeout: Duration,
     pub stream_limits: StreamLimits,
 }
+
 impl ProviderConfig {
     /// Validates non-secret configuration DATA only; no environment/TLS/request access.
     /// The returned endpoint is selection DATA, never guest/run/admission authority.
@@ -93,6 +97,7 @@ impl ProviderConfig {
         endpoint(&self.base_url)
     }
 }
+
 pub struct ChatCompletionsClient {
     agent: ureq::Agent,
     endpoint: String,
@@ -100,10 +105,12 @@ pub struct ChatCompletionsClient {
     authorization: HeaderValue,
     session: Option<HeaderValue>,
 }
+
 impl ChatCompletionsClient {
     pub fn new(config: ProviderConfig) -> Result<Self, ClientError> {
         Self::with_lookup(config, |name| std::env::var(name).ok())
     }
+
     /// Testable native environment-name lookup port. Not provider/user authority or a raw-key config.
     pub fn with_lookup(
         config: ProviderConfig,
@@ -156,10 +163,12 @@ impl ChatCompletionsClient {
             session: None,
         })
     }
+
     /// Selected non-secret transport policy only; no credential value/capability is exposed.
     pub fn configuration(&self) -> &ProviderConfig {
         &self.config
     }
+
     /// Refuses copying known selected credential bytes into native input/Definition/guest DATA.
     /// No credential value is exposed and success does not grant any authority.
     pub fn guard_credential_echo(&self, data: &[u8]) -> Result<(), ClientError> {
@@ -169,6 +178,7 @@ impl ChatCompletionsClient {
             Ok(())
         }
     }
+
     /// Native per-Activation routing label, not provider authority or RequestTicket replacement.
     /// Bound once before exposure; never sourced from a model response.
     pub fn with_session_id(mut self, id: &str) -> Result<Self, ClientError> {
@@ -186,9 +196,11 @@ impl ChatCompletionsClient {
         self.session = Some(HeaderValue::from_str(id).map_err(|_| ClientError::Configuration)?);
         Ok(self)
     }
+
     pub fn endpoint(&self) -> &str {
         &self.endpoint
     }
+
     /// Caller owns authorized Definition/Run/RequestTicket binding and must persist attempt before exposure.
     /// Payload is already guest-owned request content mapped by the native adapter, never rebuilt here.
     /// This function issues one POST; redirects, ambient proxies, pooling/replay and retries are disabled.
@@ -197,27 +209,6 @@ impl ChatCompletionsClient {
         request_id: u64,
         payload: &[u8],
         limits: &Limits,
-    ) -> Result<NormalizedReply, ClientError> {
-        self.complete_inner(request_id, payload, limits, None)
-    }
-    /// Explicit native diagnostic opt-in. Refused bodies are bounded RAM-only DATA;
-    /// callback receives finite static classifications, never provider strings or authority.
-    /// One POST, same no-retry/credential/normalization gates as complete().
-    pub fn complete_diagnostic(
-        &self,
-        request_id: u64,
-        payload: &[u8],
-        limits: &Limits,
-        report: &mut dyn FnMut(Diagnostic),
-    ) -> Result<NormalizedReply, ClientError> {
-        self.complete_inner(request_id, payload, limits, Some(report))
-    }
-    fn complete_inner(
-        &self,
-        request_id: u64,
-        payload: &[u8],
-        limits: &Limits,
-        report: Option<&mut dyn FnMut(Diagnostic)>,
     ) -> Result<NormalizedReply, ClientError> {
         self.validate_request(payload, limits)?;
         let mut request = self
@@ -242,16 +233,6 @@ impl ChatCompletionsClient {
             _ => ClientError::Transport,
         })?;
         let (parts, body) = response.into_parts();
-        if let Some(report) = report {
-            if !parts.status.is_success() {
-                report(diagnostic::inspect(
-                    parts.status.as_u16(),
-                    body.into_reader(),
-                    self.key(),
-                ));
-                return Err(ClientError::Status(parts.status.as_u16()));
-            }
-        }
         self.read_response(
             request_id,
             parts.status.as_u16(),
@@ -260,6 +241,7 @@ impl ChatCompletionsClient {
             limits,
         )
     }
+
     fn validate_request(&self, payload: &[u8], limits: &Limits) -> Result<(), ClientError> {
         let value = json::parse(
             payload,
@@ -304,9 +286,11 @@ impl ChatCompletionsClient {
         }
         Ok(())
     }
+
     fn key(&self) -> &[u8] {
         &self.authorization.as_bytes()[7..]
     }
+
     // Shared with the offline transport port. Successful EOF is observed by Read, not guessed at DONE.
     fn read_response(
         &self,
@@ -426,11 +410,13 @@ impl ChatCompletionsClient {
         Ok(reply)
     }
 }
+
 fn env_name(name: &str) -> bool {
     let mut bytes = name.bytes();
     matches!(bytes.next(), Some(b'A'..=b'Z' | b'a'..=b'z' | b'_'))
         && bytes.all(|b| b.is_ascii_alphanumeric() || b == b'_')
 }
+
 fn endpoint(base: &str) -> Result<String, ClientError> {
     if base
         .bytes()
@@ -461,9 +447,11 @@ fn endpoint(base: &str) -> Result<String, ClientError> {
     }
     Ok(value)
 }
+
 fn contains(bytes: &[u8], key: &[u8]) -> bool {
     bytes.windows(key.len()).any(|part| part == key)
 }
+
 fn json_has_secret(value: &Value, key: &[u8]) -> bool {
     match value {
         Value::String(text) => contains(text.as_bytes(), key),
@@ -474,5 +462,6 @@ fn json_has_secret(value: &Value, key: &[u8]) -> bool {
         _ => false,
     }
 }
+
 #[cfg(test)]
 mod tests;

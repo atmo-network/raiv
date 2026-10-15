@@ -1,4 +1,5 @@
 //! Explicit native world genesis approval; data inspection neither adopts nor issues tickets.
+
 use super::{
     bounds,
     config::{decimal, id, Config},
@@ -23,6 +24,7 @@ use raiv_agent_host::{
     VmLimits,
 };
 use std::{path::Path, str::FromStr};
+
 pub(super) fn selected_pin(
     path: &Path,
     config: &Config,
@@ -32,6 +34,7 @@ pub(super) fn selected_pin(
     let text = std::str::from_utf8(&bytes).map_err(|_| fail("pin must be UTF-8"))?;
     parse_pin(text, config, definition)
 }
+
 fn parse_pin(text: &str, config: &Config, definition: &Definition) -> Result<LocalRecoveryPin> {
     let table = toml::Table::from_str(text).map_err(|_| fail("invalid pin TOML"))?;
     if table.len() != 3
@@ -65,6 +68,7 @@ fn parse_pin(text: &str, config: &Config, definition: &Definition) -> Result<Loc
         resources: VmLimits::default(),
     })
 }
+
 pub fn execute(
     config: &Config,
     definition: &Definition,
@@ -143,12 +147,15 @@ pub fn execute(
     Ok(format!("mode=scripted-world-data\nworld_digest={}\nvirtual_units_initial={}\nvirtual_units_available={}\nledger_rows={}\nauthority=status-does-not-adopt-reserve-submit-or-dispatch\n",
         hex(&DaslCid::for_block(DaslCodec::Raw,&state.encode(&limits.executor)?).digest()),state.initial_units(),state.available_units(),state.ledger().records().count()))
 }
+
 pub(super) fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn independent_pin_requires_complete_canonical_fields_and_full_u64_revision() {
         let config = Config {
@@ -161,6 +168,7 @@ mod tests {
             live: None,
             mandate: None,
             reasoning_effort: None,
+            provider: guest::Provider::OpencodeGo,
         };
         let def = guest::scripted_definition(config.profile).unwrap();
         let root = DaslCid::for_block(DaslCodec::Drisl, &[0xa0]);

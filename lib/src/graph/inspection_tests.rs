@@ -4,16 +4,19 @@ use core::cell::Cell;
 fn closures() -> Value {
     serde_json::from_str(include_str!("../../../fixtures/format/closure.json")).unwrap()
 }
+
 struct CountingStore {
     blocks: Store,
     calls: Cell<u64>,
 }
+
 impl MaterializedBlocks for CountingStore {
     fn get(&self, cid: DaslCid) -> Option<&[u8]> {
         self.calls.set(self.calls.get() + 1);
         self.blocks.get(cid)
     }
 }
+
 fn changed_definition(blocks: &mut Store, root: DaslCid, limits: Limits) -> DaslCid {
     let state = AgentState::decode(blocks.get(root).unwrap(), &DecodeLimits::default()).unwrap();
     let definition = Definition::decode(

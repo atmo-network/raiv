@@ -88,6 +88,7 @@ pub struct ReceiptView<'a> {
     bytes: &'a [u8],
     fields: [ValueView<'a>; 7],
 }
+
 impl<'a> ReceiptView<'a> {
     /// Validate untrusted borrowed bytes without allocating another Receipt payload.
     /// Canonical preflight may allocate bounded traversal metadata.
@@ -95,15 +96,18 @@ impl<'a> ReceiptView<'a> {
         Receipt::validate_encoded(bytes, limits)?;
         Ok(Self::from_validated(bytes))
     }
+
     pub(crate) fn from_validated(bytes: &'a [u8]) -> Self {
         Self {
             bytes,
             fields: validated_fields(bytes),
         }
     }
+
     pub fn as_bytes(self) -> &'a [u8] {
         self.bytes
     }
+
     pub fn action_id(self) -> Id32 {
         self.fields[0]
             .bytes()
@@ -111,6 +115,7 @@ impl<'a> ReceiptView<'a> {
             .try_into()
             .expect("validated Id32")
     }
+
     pub fn command_digest(self) -> Id32 {
         self.fields[1]
             .bytes()
@@ -118,13 +123,16 @@ impl<'a> ReceiptView<'a> {
             .try_into()
             .expect("validated Id32")
     }
+
     pub fn outcome(self) -> Outcome {
         Outcome::parse(self.fields[2].text().expect("validated outcome text"))
             .expect("validated terminal outcome")
     }
+
     pub fn result_bytes(self) -> &'a [u8] {
         self.fields[3].encoded()
     }
+
     pub fn execution_reference(self) -> Option<&'a str> {
         (!self.fields[4].is_null()).then(|| {
             self.fields[4]
@@ -132,9 +140,11 @@ impl<'a> ReceiptView<'a> {
                 .expect("validated execution reference")
         })
     }
+
     pub fn finalized_at(self) -> Position {
         Position::from_view(self.fields[5]).expect("validated Position")
     }
+
     pub fn costs_bytes(self) -> &'a [u8] {
         self.fields[6].encoded()
     }

@@ -1,9 +1,11 @@
 //! Local-only file-backed boundary commit; no effect/dispatch permit.
+
 use super::*;
 use crate::{
     checkpoint::{CheckpointError, CheckpointManifest, ManifestLimits},
     disk::{manifest::ManifestError, DiskBlockStore, DiskError},
 };
+
 #[derive(Debug)]
 pub enum LocalAcceptanceError {
     Binding(AcceptanceError),
@@ -13,6 +15,7 @@ pub enum LocalAcceptanceError {
     MissingManifest,
     Conflict,
 }
+
 impl fmt::Display for LocalAcceptanceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -25,7 +28,9 @@ impl fmt::Display for LocalAcceptanceError {
         })
     }
 }
+
 impl std::error::Error for LocalAcceptanceError {}
+
 /// Requires an already durably recorded exact Launched source manifest. This port
 /// commits a sealed boundary, not an admission-before-inference/accounting protocol.
 /// Registered source + opaque book/run joins precede any placement/publication.

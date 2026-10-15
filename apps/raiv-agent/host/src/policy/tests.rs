@@ -5,6 +5,7 @@ use crate::{
 };
 use raiv::format::DecodeLimits;
 use std::{fs, os::unix::fs::MetadataExt};
+
 fn caps() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -12,6 +13,7 @@ fn caps() -> ManifestLimits {
         max_admissions: 10,
     }
 }
+
 #[test]
 fn empty_approved_baseline_exact_ack_and_current_pin_preserve_inode_and_ram() {
     let wasm = output::invalid_output_module();
@@ -52,6 +54,7 @@ fn empty_approved_baseline_exact_ack_and_current_pin_preserve_inode_and_ram() {
     assert_eq!(fs::read(&block_path).unwrap(), [0x80]);
     assert_eq!(fs::read(&path).unwrap(), bytes);
 }
+
 #[test]
 fn missing_manifest_nonempty_directory_any_orphan_and_corruption_are_never_genesis_fallback() {
     let wasm = output::invalid_output_module();
@@ -90,6 +93,7 @@ fn missing_manifest_nonempty_directory_any_orphan_and_corruption_are_never_genes
         [0xff]
     );
 }
+
 #[test]
 fn uncertainty_exact_retry_conflict_and_pending_admission_cannot_be_reinitialized_or_exported_as_old_pin(
 ) {

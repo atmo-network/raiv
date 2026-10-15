@@ -1,10 +1,13 @@
 //! Linux native entrypoint composition; init is explicit local administration, status DATA only.
+
 mod advance;
 mod config;
 mod execution;
 mod interactive;
+mod memory_view;
 mod scenario;
 mod world;
+
 use config::Config;
 use raiv::{
     definition::MemoryProfile,
@@ -30,10 +33,13 @@ use std::{
     io::{self, Read},
     path::Path,
 };
+
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
+
 fn fail(message: &'static str) -> Box<dyn Error> {
     Box::new(io::Error::new(io::ErrorKind::InvalidInput, message))
 }
+
 fn read_bounded(path: &Path, cap: usize) -> Result<Vec<u8>> {
     let file = File::open(path)?;
     let meta = file.metadata()?;
@@ -48,6 +54,7 @@ fn read_bounded(path: &Path, cap: usize) -> Result<Vec<u8>> {
     }
     Ok(out)
 }
+
 fn bounds() -> ManifestLimits {
     ManifestLimits {
         wire: DecodeLimits::default(),
@@ -55,6 +62,7 @@ fn bounds() -> ManifestLimits {
         max_admissions: 1024,
     }
 }
+
 fn initialize(
     config: &Config,
     definition: &raiv::definition::Definition,
@@ -135,6 +143,7 @@ fn initialize(
     initialize_local(registered, &book, disk, &limits, &caller)?;
     Ok((registry, book))
 }
+
 pub fn run(args: Vec<OsString>) -> Result<String> {
     const HELP:&str="Usage: raiv-agent init|status|world-status --config <file>\n       raiv-agent init-world --pin <approved-main-pin.toml> --config <file>\n       raiv-agent wake --event <input.cbor> --grant <approved-grant.cbor> --replies <script.cbor> --pin <approved-main.toml> --world-pin <hex> --config <file>\n       raiv-agent execute-pending --plan <approved-plan.toml> --pin <approved-main.toml> --world-pin <hex> --config <file>\n       raiv-agent resume --receipt <action-result-input.cbor> --grant <approved-grant.cbor> --replies <script.cbor> --pin <approved-main.toml> --world-pin <hex> --config <file>\n       raiv-agent run-scenario retry-and-sleep --inference scripted --config <file>\nLive wake/resume omit --replies and use selected bounded HTTPS inference; scripted commands require --replies.\nLinux local-test administration/synthetic world; interactive requires --grants <finite-plan.toml> --pin <main.toml> --world-pin <hex> --config <file>; no real effects.\n";
     if args.len() == 1 && (args[0] == "--help" || args[0] == "-h") {
@@ -370,8 +379,13 @@ pub fn run(args: Vec<OsString>) -> Result<String> {
         .memory()
         .map(|memory| memory.cid().to_string())
         .unwrap_or_else(|| "none".into());
+    // Compact single-line JSON of what the agent remembers; presentation, not authority.
+    let memory = snapshot
+        .memory()
+        .map(|memory| memory.json().to_string())
+        .unwrap_or_else(|| "none".into());
     let retained = format!(
-        "memory_cid={memory_cid}\ncompleted_episodes={}\n",
+        "memory_cid={memory_cid}\nmemory={memory}\ncompleted_episodes={}\n",
         snapshot.history().count()
     );
     let stages=format!("reserved_admissions={}\nattempted_admissions={}\nlaunched_admissions={}\nconsumed_admissions={}\n",states[0],states[1],states[2],states[3]);
@@ -379,9 +393,11 @@ pub fn run(args: Vec<OsString>) -> Result<String> {
         snapshot.root(),snapshot.state().revision(),match config.profile{MemoryProfile::None=>"veto",MemoryProfile::IntentsStrategyTactics=>"survivor"},
         snapshot.state().continuation(),snapshot.state().current_episode_link(),manifest.admissions().len(),unresolved,manifest.required_cids().len()))
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn cli_shape_rejects_implicit_commands_before_any_io() {
         for args in [

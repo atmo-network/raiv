@@ -1,6 +1,7 @@
 use super::*;
 use crate::recovery::adopt_local;
 use std::os::unix::fs::MetadataExt;
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn independently_paired_main_world_reopen_preserves_ready_submitted_terminal_and_new_origin_without_replay(
@@ -168,6 +169,7 @@ fn independently_paired_main_world_reopen_preserves_ready_submitted_terminal_and
         assert_eq!(world.state().encode(&b.executor).unwrap(), settled);
     }
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn world_adoption_pin_source_capacity_caps_missing_corruption_refuse_without_reseed_or_partial_session(

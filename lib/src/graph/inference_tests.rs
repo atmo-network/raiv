@@ -22,6 +22,7 @@ pub(super) fn session(
         CallBudget::from_input(&checked).unwrap(),
     )
 }
+
 #[test]
 fn one_outstanding_request_and_stable_pending_views_debit_only_issue_not_reply_or_inspection() {
     for (blocks, root) in restored::valid_snapshots() {
@@ -69,6 +70,7 @@ fn one_outstanding_request_and_stable_pending_views_debit_only_issue_not_reply_o
         assert_eq!(run.budget().used(), used);
     }
 }
+
 #[test]
 fn wrong_instance_stale_future_duplicate_and_delayed_error_keys_leave_pending_state_exact() {
     let fixture = &identity_graphs()[0];
@@ -125,6 +127,7 @@ fn wrong_instance_stale_future_duplicate_and_delayed_error_keys_leave_pending_st
     );
     assert_eq!(run.budget().used().model_calls, 2);
 }
+
 #[test]
 fn continue_and_corrective_cycles_preserve_episode_counts_and_monotonic_ids_without_mutating_checkpoint_buffers(
 ) {
@@ -168,6 +171,7 @@ fn continue_and_corrective_cycles_preserve_episode_counts_and_monotonic_ids_with
         before
     );
 }
+
 #[test]
 fn terminal_control_seals_and_instance_sequence_survives_the_next_activation_without_id_reuse() {
     let (blocks, root) = restored::memory_profile_snapshot();
@@ -207,6 +211,7 @@ fn terminal_control_seals_and_instance_sequence_survives_the_next_activation_wit
         assert_eq!(next.pending_request(), Some(key));
     }
 }
+
 #[test]
 fn refused_control_can_correct_but_corrective_exhaustion_and_failed_model_admission_never_seal_no_op(
 ) {
@@ -266,6 +271,7 @@ fn refused_control_can_correct_but_corrective_exhaustion_and_failed_model_admiss
     assert_eq!(run.budget().used().corrective_turns, 0);
     assert_eq!(run.budget().used().actions, 0);
 }
+
 #[test]
 fn repeated_plain_text_corrections_are_activation_bounded_and_failure_preserves_spent_attempts() {
     let fixture = &fixtures()[0];

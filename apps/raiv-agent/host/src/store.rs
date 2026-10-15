@@ -1,16 +1,19 @@
 //! Exact-byte bounded RAM storage. Placement/readback is neither durability nor acceptance.
+
 use raiv::{
     format::{validate_drisl, CodecError, DaslCid, DecodeLimits},
     graph::{GraphError, MaterializedBlocks, RestoredAgent},
     limits::Limits,
 };
 use std::fmt;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct StoreLimits {
     pub max_blocks: u64,
     pub max_bytes: u64,
     pub wire: DecodeLimits,
 }
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StoreError {
     Codec(CodecError),
@@ -21,6 +24,7 @@ pub enum StoreError {
     Graph(GraphError),
     SnapshotMismatch,
 }
+
 impl fmt::Display for StoreError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -34,11 +38,14 @@ impl fmt::Display for StoreError {
         })
     }
 }
+
 impl std::error::Error for StoreError {}
+
 struct Block {
     cid: DaslCid,
     body: Vec<u8>,
 }
+
 /// Capacity is explicit native policy, independent of one Core closure's limits.
 /// No hydration, eviction, alternate-byte normalization or implicit HEAD update.
 pub struct MemoryBlockStore {
@@ -46,6 +53,7 @@ pub struct MemoryBlockStore {
     bytes: u64,
     limits: StoreLimits,
 }
+
 impl MemoryBlockStore {
     pub fn new(limits: StoreLimits) -> Self {
         Self {
@@ -54,24 +62,30 @@ impl MemoryBlockStore {
             limits,
         }
     }
+
     pub fn block_count(&self) -> u64 {
         self.blocks.len() as u64
     }
+
     pub fn encoded_bytes(&self) -> u64 {
         self.bytes
     }
+
     pub fn blocks(&self) -> impl Iterator<Item = (DaslCid, &[u8])> {
         self.blocks.iter().map(|b| (b.cid, b.body.as_slice()))
     }
+
     /// Validate before ownership. Equal CID/body is idempotent without another payload.
     pub fn put(&mut self, cid: DaslCid, body: &[u8]) -> Result<(), StoreError> {
         self.stage(core::iter::once((cid, body)))
     }
+
     /// Stage the entire unique required closure atomically; unchanged source blocks reuse
     /// their existing owned buffers. Failure keeps visible blocks/count/bytes unchanged.
     pub fn place(&mut self, snapshot: &RestoredAgent) -> Result<(), StoreError> {
         self.stage(snapshot.blocks())
     }
+
     /// Re-read the whole bounded required closure, including every existing dependency.
     /// This is a current RAM data check, not a retention lease or future availability proof.
     pub fn readback(&self, expected: &RestoredAgent, caller: &Limits) -> Result<(), StoreError> {
@@ -82,6 +96,7 @@ impl MemoryBlockStore {
         }
         Ok(())
     }
+
     fn stage<'a>(
         &mut self,
         blocks: impl Iterator<Item = (DaslCid, &'a [u8])>,
@@ -125,6 +140,7 @@ impl MemoryBlockStore {
         Ok(())
     }
 }
+
 impl MaterializedBlocks for MemoryBlockStore {
     fn get(&self, cid: DaslCid) -> Option<&[u8]> {
         self.blocks
@@ -133,9 +149,11 @@ impl MaterializedBlocks for MemoryBlockStore {
             .map(|b| b.body.as_slice())
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn later_corrupt_or_over_capacity_batch_never_publishes_earlier_staging() {
         let a = [0xa0];
@@ -168,6 +186,7 @@ mod tests {
         assert!(store.get(cb).is_none());
         assert_eq!(store.encoded_bytes(), 1);
     }
+
     #[test]
     fn corrupted_existing_bytes_are_not_overwritten_or_hidden_by_idempotence() {
         let body = [0xa0];

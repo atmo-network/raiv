@@ -6,6 +6,7 @@ use crate::{
 };
 use raiv::{format::DecodeLimits, limits::Limits};
 use std::fs;
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn full_old_new_closure_reopen_readback_every_missing_corrupt_dependency_and_no_manifest_or_head_change(

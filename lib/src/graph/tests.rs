@@ -4,26 +4,31 @@ use super::*;
 mod inspection;
 #[path = "role_tests.rs"]
 mod roles;
+
 use crate::definition::{DefinitionSpec, MemoryProfile};
 use crate::format::DaslCodec;
 use alloc::{collections::BTreeMap, vec, vec::Vec};
 use serde_json::Value;
 
 struct Store(BTreeMap<DaslCid, Vec<u8>>);
+
 impl MaterializedBlocks for Store {
     fn get(&self, cid: DaslCid) -> Option<&[u8]> {
         self.0.get(&cid).map(Vec::as_slice)
     }
 }
+
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
         .step_by(2)
         .map(|i| u8::from_str_radix(&text[i..i + 2], 16).unwrap())
         .collect()
 }
+
 fn fixtures() -> Value {
     serde_json::from_str(include_str!("../../../fixtures/format/genesis.json")).unwrap()
 }
+
 fn store(fixture: &Value) -> Store {
     Store(
         fixture["blocks"]
@@ -39,9 +44,11 @@ fn store(fixture: &Value) -> Store {
             .collect(),
     )
 }
+
 fn root(fixture: &Value) -> DaslCid {
     fixture["root"].as_str().unwrap().parse().unwrap()
 }
+
 fn parts(fixture: &Value) -> (Definition, Option<Memory>) {
     let find = |kind| {
         fixture["blocks"]
@@ -56,6 +63,7 @@ fn parts(fixture: &Value) -> (Definition, Option<Memory>) {
         find("memory").map(|bytes| Memory::decode(&bytes, &DecodeLimits::default()).unwrap()),
     )
 }
+
 fn build(fixture: &Value, limits: &Limits) -> Result<Genesis, GraphError> {
     let (definition, memory) = parts(fixture);
     Genesis::build(
@@ -67,12 +75,14 @@ fn build(fixture: &Value, limits: &Limits) -> Result<Genesis, GraphError> {
         limits,
     )
 }
+
 fn altered_root(store: &mut Store, spec: &AgentStateSpec<'_>) -> DaslCid {
     let state = AgentState::encode(spec, &DecodeLimits::default()).unwrap();
     let cid = state.cid();
     store.0.insert(cid, state.as_bytes().to_vec());
     cid
 }
+
 fn policy(definition: &Definition, limits: Limits) -> Definition {
     let tools = definition.tools().collect::<Vec<_>>();
     Definition::encode(

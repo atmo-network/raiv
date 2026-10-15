@@ -6,6 +6,7 @@ fn check_grants(blocks: &Store, root: DaslCid) -> Result<(), GraphError> {
         .unwrap()
         .check_admission_grants()
 }
+
 fn grant_change(
     blocks: &mut Store,
     root: DaslCid,

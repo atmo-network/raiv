@@ -1,6 +1,8 @@
 //! Actual Wasmi decisions -> independently held atomic scripted virtual world, not market execution.
+
 mod ledger_admission;
 mod recovery;
+
 use super::*;
 use crate::{
     acceptance::accept_local,
@@ -20,6 +22,7 @@ use crate::{
     },
 };
 use raiv::{format::DecodeLimits, limits::Limits, receipt::Outcome};
+
 fn bounds() -> LocalExecutorLimits {
     LocalExecutorLimits {
         executor: ExecutorLimits {
@@ -34,6 +37,7 @@ fn bounds() -> LocalExecutorLimits {
         caller: Limits::default(),
     }
 }
+
 fn commit(
     wasm: &[u8],
     registry: &mut Registry,
@@ -69,6 +73,7 @@ fn commit(
     )
     .unwrap();
 }
+
 #[test]
 #[ignore = "build Rust wasm32v1-none guest and set RAIV_GUEST_WASM"]
 fn independent_primary_world_failed_retry_success_debits_once_and_old_receipt_never_rolls_back() {

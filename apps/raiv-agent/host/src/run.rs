@@ -1,4 +1,5 @@
 //! Owns local live-VM routing, not registry approval, fresh admission or checkpoint acceptance.
+
 use crate::{
     output::{Candidate, Output, Request},
     BridgeError, GuestVm, VmLimits, MAX_FRAME_BYTES,
@@ -10,8 +11,11 @@ use raiv::{
     preparation::{InputBinding, PreparedInput},
 };
 use std::{fmt, sync::atomic::AtomicU64};
+
 mod wire;
+
 static NEXT_ORIGIN: AtomicU64 = AtomicU64::new(1);
+
 /// Explicit integration-supplied program pin. Construction is NOT registry approval.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ProgramBinding {
@@ -19,6 +23,7 @@ pub struct ProgramBinding {
     pub definition: DaslCid,
     pub execution_domain: Id32,
 }
+
 impl ProgramBinding {
     pub(crate) fn check_module(self, wasm: &[u8], source: &RestoredAgent) -> Result<(), RunError> {
         if wasm.len() > MAX_FRAME_BYTES {
@@ -33,6 +38,7 @@ impl ProgramBinding {
         Ok(())
     }
 }
+
 /// Opaque safe-Rust correlation capability, never serialized/provider-controlled.
 /// Uniqueness is process-local only; detached/restarted transports need their own protection.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -40,20 +46,24 @@ pub struct RequestTicket {
     origin: u64,
     request_id: u64,
 }
+
 impl RequestTicket {
     pub(crate) fn same_run(self, other: Self) -> bool {
         self.origin == other.origin
     }
+
     pub fn request_id(self) -> u64 {
         self.request_id
     }
 }
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Phase {
     Pending,
     Boundary,
     Failed,
 }
+
 #[derive(Debug)]
 pub enum RunError {
     ProgramBinding,
@@ -69,6 +79,7 @@ pub enum RunError {
     Bridge(BridgeError),
     Candidate(crate::candidate::VerificationError),
 }
+
 impl fmt::Display for RunError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -87,7 +98,9 @@ impl fmt::Display for RunError {
         })
     }
 }
+
 impl std::error::Error for RunError {}
+
 /// The source/input and program pin remain immutable while the same VM owns all decisions.
 /// Reference guest policy is currently scripted-only with default caller caps/one-unit quotes.
 pub struct Run<'a> {
@@ -101,6 +114,7 @@ pub struct Run<'a> {
     output: Vec<u8>,
     candidate_snapshot: Option<RestoredAgent>,
 }
+
 /// Owning actual-VM output handoff. Private origin/binding and snapshot cannot be forged
 /// by decoding candidate bytes. No borrowed source remains; no acceptance/dispatch grant.
 pub struct SealedRun {
@@ -110,6 +124,7 @@ pub struct SealedRun {
     frame: Vec<u8>,
     pub(crate) snapshot: Option<RestoredAgent>,
 }
+
 impl SealedRun {
     pub fn candidate(&self) -> Candidate<'_> {
         let Output::Boundary(candidate) =
@@ -120,10 +135,12 @@ impl SealedRun {
         };
         candidate
     }
+
     pub fn snapshot(&self) -> Option<&RestoredAgent> {
         self.snapshot.as_ref()
     }
 }
+
 impl<'a> Run<'a> {
     pub fn start(
         wasm: &[u8],
@@ -151,6 +168,7 @@ impl<'a> Run<'a> {
         run.exchange(&input)?;
         Ok(run)
     }
+
     /// Move verified boundary data without keeping the source/registered anchor borrowed.
     pub fn into_sealed(self) -> Result<SealedRun, RunError> {
         if self.phase != Phase::Boundary || self.candidate_snapshot.is_none() {
@@ -164,21 +182,27 @@ impl<'a> Run<'a> {
             snapshot: self.candidate_snapshot,
         })
     }
+
     pub(crate) fn origin(&self) -> u64 {
         self.origin
     }
+
     pub fn phase(&self) -> Phase {
         self.phase
     }
+
     pub fn program_binding(&self) -> ProgramBinding {
         self.program
     }
+
     pub fn input_binding(&self) -> InputBinding {
         self.packet.binding()
     }
+
     pub fn source(&self) -> &RestoredAgent {
         self.source
     }
+
     /// Borrow exact guest context/descriptors; never rebuild or select tools in the host.
     pub fn pending(&self) -> Option<(RequestTicket, Request<'_>)> {
         if self.phase != Phase::Pending {
@@ -199,6 +223,7 @@ impl<'a> Run<'a> {
             request,
         ))
     }
+
     /// Sealed immutable candidate DATA may be retried by the later persistence owner.
     pub fn candidate(&self) -> Option<Candidate<'_>> {
         if self.phase != Phase::Boundary {
@@ -209,10 +234,12 @@ impl<'a> Run<'a> {
         };
         Some(candidate)
     }
+
     /// Complete source-joined checkpoint DATA, still not accepted HEAD.
     pub fn candidate_snapshot(&self) -> Option<&RestoredAgent> {
         self.candidate_snapshot.as_ref()
     }
+
     pub fn output(&self) -> Option<Output<'_>> {
         if self.output.is_empty() {
             None
@@ -223,6 +250,7 @@ impl<'a> Run<'a> {
             )
         }
     }
+
     pub fn reply(&mut self, ticket: RequestTicket, bytes: &[u8]) -> Result<(), RunError> {
         self.check_ticket(ticket)?;
         let mut caps = raiv::limits::Limits::default();
@@ -241,6 +269,7 @@ impl<'a> Run<'a> {
         let input = wire::reply(ticket.request_id, bytes)?;
         self.exchange(&input)
     }
+
     pub fn inference_error(&mut self, ticket: RequestTicket, code: &str) -> Result<(), RunError> {
         self.check_ticket(ticket)?;
         if code.len() > 256 {
@@ -249,6 +278,7 @@ impl<'a> Run<'a> {
         let input = wire::error_frame(ticket.request_id, code)?;
         self.exchange(&input)
     }
+
     fn check_ticket(&self, ticket: RequestTicket) -> Result<(), RunError> {
         if self.phase != Phase::Pending {
             return Err(RunError::Phase);
@@ -258,6 +288,7 @@ impl<'a> Run<'a> {
         }
         Ok(())
     }
+
     fn exchange(&mut self, input: &[u8]) -> Result<(), RunError> {
         let output = match self.vm.as_mut().expect("live VM").round_trip(input) {
             Ok(bytes) => bytes,
@@ -280,6 +311,7 @@ impl<'a> Run<'a> {
             }
         }
     }
+
     fn fail(&mut self) {
         self.vm = None;
         self.phase = Phase::Failed;
@@ -287,6 +319,7 @@ impl<'a> Run<'a> {
         self.output.clear();
         self.candidate_snapshot = None;
     }
+
     fn route(&mut self, bytes: &[u8]) -> Result<Phase, RunError> {
         let output = Output::decode(bytes, &raiv::limits::Limits::default())
             .map_err(|_| RunError::Protocol)?;
@@ -336,6 +369,7 @@ impl<'a> Run<'a> {
         }
     }
 }
+
 fn check_binding(
     wasm: &[u8],
     program: ProgramBinding,

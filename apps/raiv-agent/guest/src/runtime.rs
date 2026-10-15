@@ -1,4 +1,5 @@
 //! Owns retained compiled demo Activation, not host approval, provider work or checkpoint acceptance.
+
 use super::{abi, profiles, AbiError, Guest};
 use alloc::vec::Vec;
 use raiv::{
@@ -35,7 +36,7 @@ impl Guest {
                     Err(ActivationError::Reply(ReplyError::Inference(
                         InferenceError::WrongRequest,
                     ))) => Err(AbiError::WrongRequest),
-                    Err(_) => Err(AbiError::RunFailure),
+                    Err(error) => Err(run_failure(&error)),
                 }
             }
             abi::Input::InferenceError { request_id } => {
@@ -55,6 +56,7 @@ impl Guest {
             }
         }
     }
+
     fn activate(&mut self, frame: abi::Activate<'_>) -> Result<Vec<u8>, AbiError> {
         if self.live.is_some() {
             return Err(AbiError::Busy);
@@ -94,6 +96,23 @@ impl Guest {
         emit_infer(self.live.as_mut().expect("stored Activation"))
     }
 }
+
+/// Closed category of a failed activation; no model text, arguments or provider data.
+fn run_failure(error: &ActivationError) -> AbiError {
+    use raiv::{activation::CallBudgetError as Budget, projection::ProjectionError};
+    match error {
+        ActivationError::Inference(InferenceError::Counts(Budget::CorrectiveTurnsExhausted)) => {
+            AbiError::CorrectiveTurnsExhausted
+        }
+        ActivationError::Inference(InferenceError::Counts(
+            Budget::ModelCallsExhausted | Budget::LocalToolsExhausted | Budget::ActionsExhausted,
+        ))
+        | ActivationError::Inference(InferenceError::Units(_)) => AbiError::BudgetExhausted,
+        ActivationError::Projection(ProjectionError::ContextLimit) => AbiError::ContextLimit,
+        _ => AbiError::RunFailure,
+    }
+}
+
 fn emit_infer(run: &mut Activation<'_>) -> Result<Vec<u8>, AbiError> {
     let key = run.request().map_err(|_| AbiError::RunFailure)?.binding();
     match abi::infer(run.request().map_err(|_| AbiError::RunFailure)?) {

@@ -1,7 +1,9 @@
 //! Independent CBOR schema/bounds mutations and actual bridge output rejection.
+
 use super::*;
 use crate::output::{DecodeError, Output};
 use raiv::limits::Limits;
+
 fn outputs() -> Vec<Vec<u8>> {
     let mut guest = guest::Guest::new();
     let data = guest.step(&frame(1)).unwrap();
@@ -10,6 +12,7 @@ fn outputs() -> Vec<Vec<u8>> {
     let error = guest.step(&error(1)).unwrap();
     vec![data, infer, boundary, error]
 }
+
 #[test]
 fn closed_outputs_borrow_exact_source_spans_full_width_runtime_fields_and_cid_sorted_delta() {
     let frames = outputs();
@@ -80,6 +83,7 @@ fn closed_outputs_borrow_exact_source_spans_full_width_runtime_fields_and_cid_so
     };
     assert_eq!(code, "wrong_inference_request");
 }
+
 #[test]
 fn transport_rejects_truncation_versions_duplicates_unknown_fields_types_and_trailing_data() {
     for bytes in outputs() {
@@ -113,6 +117,7 @@ fn transport_rejects_truncation_versions_duplicates_unknown_fields_types_and_tra
         Err(DecodeError::Limit)
     ));
 }
+
 #[test]
 fn block_integrity_unique_cids_delta_order_and_independent_caller_bounds_precede_data_use() {
     let frames = outputs();
@@ -163,6 +168,7 @@ fn block_integrity_unique_cids_delta_order_and_independent_caller_bounds_precede
     set(&mut changed, "payload", payload);
     assert!(Output::decode(&encode(&changed), &Limits::default()).is_err());
 }
+
 #[test]
 fn request_context_parameters_descriptors_and_limits_remain_bounded_and_closed() {
     let frames = outputs();
@@ -199,6 +205,7 @@ fn request_context_parameters_descriptors_and_limits_remain_bounded_and_closed()
     );
     assert!(Output::decode(&huge, &Limits::default()).is_err());
 }
+
 pub(crate) fn invalid_output_module() -> Vec<u8> {
     // Minimal import-free test module: required typed exports, one memory, alloc=32,
     // step=(64<<32)|2, static invalid CBOR at offset 64. No WAT dependency or I/O.
@@ -209,6 +216,7 @@ pub(crate) fn invalid_output_module() -> Vec<u8> {
     wasm.extend_from_slice(b"\x0a\x13\x03\x04\0\x41\x20\x0b\x02\0\x0b\x09\0\x42\x82\x80\x80\x80\x80\x08\x0b\x0b\x09\x01\0\x41\xc0\0\x0b\x02\xff\xff");
     wasm
 }
+
 #[test]
 fn vm_invalid_typed_output_marks_instance_dead_even_with_valid_abi_ranges() {
     let mut vm = GuestVm::new(&invalid_output_module(), VmLimits::default()).unwrap();

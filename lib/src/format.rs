@@ -3,6 +3,7 @@
 
 mod codec;
 mod hash;
+mod json;
 mod map_edit;
 mod model_value;
 mod record;
@@ -18,6 +19,7 @@ pub(crate) use record::{encode_unsigned_record, RecordEncoder};
 pub(crate) use view::ValueView;
 
 pub use codec::{validate_drisl, validate_model_value, CodecError, DecodeLimits};
+pub use json::Json;
 pub use model_value::{ModelValue, ValueRef};
 
 use alloc::vec::Vec;
@@ -83,6 +85,7 @@ impl fmt::Display for CidError {
 
 impl DaslCid {
     pub const BINARY_LEN: usize = 36;
+
     pub const TEXT_LEN: usize = 59;
 
     /// Reconstruct an identifier under an explicitly selected profile, not a guessed hash type.
@@ -151,6 +154,7 @@ impl DaslCid {
 
 impl TryFrom<&[u8]> for DaslCid {
     type Error = CidError;
+
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
         Self::from_bytes(bytes)
     }
@@ -158,6 +162,7 @@ impl TryFrom<&[u8]> for DaslCid {
 
 impl FromStr for DaslCid {
     type Err = CidError;
+
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         let text = text.as_bytes();
         if text.len() != Self::TEXT_LEN {
@@ -198,6 +203,7 @@ mod tests {
 
     // Independent SHA-256/base32 oracle: Python hashlib + base64, input hex a0.
     const EMPTY_MAP: &str = "bafyreigbtj4x7ip5legnfznufuopl4sg4knzc2cof6duas4b3q2fy6swua";
+
     const DIGEST: [u8; 32] = [
         0xc1, 0x9a, 0x79, 0x7f, 0xa1, 0xfd, 0x59, 0x0c, 0xd2, 0xe5, 0xb4, 0x2d, 0x1c, 0xf5, 0xf2,
         0x46, 0xe2, 0x9b, 0x91, 0x68, 0x4e, 0x2f, 0x87, 0x40, 0x4b, 0x81, 0xdc, 0x34, 0x5c, 0x7a,

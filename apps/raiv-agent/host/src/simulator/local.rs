@@ -1,19 +1,23 @@
 //! File-backed LOCAL intent exposure composition. No backend, world mutation, spending,
 //! terminal/world transaction, executor adoption or live effect permission is provided.
+
 use super::checkpoint::{
     file::{ExecutorCheckpointFile, ExecutorFileError},
     ExecutorCheckpoint, ExecutorCheckpointError, ExecutorLimits,
 };
 use super::*;
 use crate::disk::manifest::{ManifestError, Publication};
+
 #[cfg(test)]
 mod tests;
+
 #[derive(Clone, Copy, Debug)]
 pub struct LocalExecutorLimits {
     pub executor: ExecutorLimits,
     pub manifest: ManifestLimits,
     pub caller: Limits,
 }
+
 #[derive(Debug)]
 pub enum LocalExecutorError {
     Simulator(SimulatorError),
@@ -24,6 +28,7 @@ pub enum LocalExecutorError {
     NonEmptyBaseline,
     Conflict,
 }
+
 impl fmt::Display for LocalExecutorError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -45,7 +50,9 @@ impl fmt::Display for LocalExecutorError {
         })
     }
 }
+
 impl std::error::Error for LocalExecutorError {}
+
 /// Explicit bootstrap of EMPTY executor DATA beside an already initialized main genesis.
 /// Independently selected source pin + no admissions/actions + exact source-only namespace.
 /// No late/missing-ledger fallback, orphan cleanup, world creation or capability issuance.
@@ -106,6 +113,7 @@ pub fn initialize_genesis(
         .replace(stored.as_ref(), &empty)
         .map_err(LocalExecutorError::File)
 }
+
 fn file_current(
     disk: &mut DiskBlockStore,
     limits: &LocalExecutorLimits,
@@ -115,6 +123,7 @@ fn file_current(
         .map_err(LocalExecutorError::File)?
         .ok_or(LocalExecutorError::MissingCheckpoint)
 }
+
 fn exact_row(a: &ExecutorCheckpoint, b: &ExecutorCheckpoint, record: ExecutionRecord) -> bool {
     let id = record.action_id;
     b.records().any(|r| r == record)
@@ -122,6 +131,7 @@ fn exact_row(a: &ExecutorCheckpoint, b: &ExecutorCheckpoint, record: ExecutionRe
         && a.receipt_bytes(id) == b.receipt_bytes(id)
         && a.recorded_limits(id) == b.recorded_limits(id)
 }
+
 fn ready_extension(old: &ExecutorCheckpoint, next: &ExecutorCheckpoint, action: Id32) -> bool {
     old.agent_id() == next.agent_id()
         && old.program_binding() == next.program_binding()
@@ -134,6 +144,7 @@ fn ready_extension(old: &ExecutorCheckpoint, next: &ExecutorCheckpoint, action: 
             r.action_id == action && r.status == Status::Ready && r.submission_intents == 0
         })
 }
+
 /// Require an explicitly provisioned prior typed file: no absent-ledger fallback.
 /// Add only this current Ready slot to exact retained terminal history, or acknowledge
 /// the identical whole frame. Existing Submitted/Terminal cannot be reset to Ready.
@@ -167,6 +178,7 @@ pub fn record_ready(
         .replace(Some(&old), &next)
         .map_err(LocalExecutorError::File)
 }
+
 /// Require exact Ready file/native-book equality and renewed current source readiness.
 /// Stage everything fallible before replacing Ready→Submitted/count1; fsync before
 /// Command exposure. Unknown publication consumes the RAM intent WITHOUT exposure.

@@ -18,6 +18,7 @@ fn apply(before: Value, patch: Value, expected: Value) {
     assert_eq!(working.cid(), cid);
     assert_eq!(working.as_bytes().as_ptr(), pointer);
 }
+
 #[test]
 fn recursive_merge_preserves_neighbors_and_replaces_nonobjects_and_arrays() {
     apply(
@@ -50,6 +51,7 @@ fn recursive_merge_preserves_neighbors_and_replaces_nonobjects_and_arrays() {
         json!({"tactics":{"x":{"[0]":9}}}),
     );
 }
+
 #[test]
 fn null_removes_leaves_subtrees_and_planes_without_ancestors_or_cross_plane_cascades() {
     apply(
@@ -78,6 +80,7 @@ fn null_removes_leaves_subtrees_and_planes_without_ancestors_or_cross_plane_casc
         json!({"strategy":{"x":2}}),
     );
 }
+
 #[test]
 fn empty_merge_is_not_clear_but_new_empty_objects_cascade_away() {
     apply(
@@ -104,6 +107,7 @@ fn empty_merge_is_not_clear_but_new_empty_objects_cascade_away() {
         json!({}),
     );
 }
+
 #[test]
 fn array_objects_normalize_without_losing_positions_or_falsy_data() {
     apply(
@@ -112,6 +116,7 @@ fn array_objects_normalize_without_losing_positions_or_falsy_data() {
         json!({"tactics":{"steps":[{}, {}, [{}]],"false":false,"zero":0,"text":"","array":[]}}),
     );
 }
+
 #[test]
 fn literal_keys_never_become_paths_references_or_indices() {
     apply(
@@ -120,6 +125,7 @@ fn literal_keys_never_become_paths_references_or_indices() {
         json!({"strategy":{"a.b":1,"a/b":2,"[0]":3,"$ref":"intents.key","":false,"ключ":0}}),
     );
 }
+
 #[test]
 fn map_union_preserves_canonical_order_across_utf8_and_text_header_boundaries() {
     let mut before = serde_json::Map::new();
@@ -176,6 +182,7 @@ fn full_draft_cleanup_includes_unmentioned_branches() {
     .unwrap();
     assert_eq!(output, twice);
 }
+
 #[test]
 fn failures_preserve_original_payload_cid_and_pointer_at_every_stage() {
     let source = json!({"intents":{"keep":1}});
@@ -238,6 +245,7 @@ fn normalize(value: &mut Value) {
         _ => {}
     }
 }
+
 fn merge(base: &mut Value, patch: &Value) {
     if let Value::Object(fields) = patch {
         if !base.is_object() {
@@ -257,6 +265,7 @@ fn merge(base: &mut Value, patch: &Value) {
         *base = patch.clone();
     }
 }
+
 #[test]
 fn deterministic_property_grid_matches_independent_merge_and_canonical_order() {
     let bases = [
@@ -305,5 +314,29 @@ fn deterministic_property_grid_matches_independent_merge_and_canonical_order() {
             working.apply_patch(&wire, &Limits::default()).unwrap();
             assert_eq!(working.value_bytes(), json_bytes(&expected));
         }
+    }
+}
+
+#[test]
+fn non_object_planes_get_actionable_feedback_naming_the_expected_shape() {
+    // Live-observed model mistakes: a plane given as text, then as an array.
+    for bytes in [
+        &b"\xa1\x67intents\x61x"[..],
+        &b"\xa1\x67intents\x81\x61x"[..],
+    ] {
+        let Err(error) = PatchArguments::decode(bytes, &Limits::default()) else {
+            panic!("non-object plane accepted");
+        };
+        assert_eq!(error, PatchError::PlaneNotMap);
+        assert!(error.feedback().starts_with("invalid_patch: "));
+        assert!(error.feedback().contains("object of named entries"));
+    }
+    for error in [
+        PatchError::NullInArray,
+        PatchError::InvalidArguments,
+        PatchError::EntryLimit,
+        PatchError::Codec(CodecError::ByteLimit),
+    ] {
+        assert!(error.feedback().starts_with("invalid_patch: ") && error.feedback().len() <= 256);
     }
 }

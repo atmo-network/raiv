@@ -2,6 +2,8 @@
 
 This directory owns pinned input vectors, their provenance and the Raiv-specific acceptance overlay. The six structural codecs, embedded records, genesis and bounded checkpoint-data restoration have independent conformance evidence. A coherent data graph is not an accepted host lineage or runnable Activation.
 
+The vectors are frozen golden data. Their expected bytes, hashes and CIDs were produced independently of Raiv's codec when each vector was created (see the per-file provenance below). [`lib/src/fixture_tests.rs`](../lib/src/fixture_tests.rs) checks that every vector stays canonical and self-consistent under the independent Ciborium oracle: bytes equal the record, hashes and CIDs match, one CID names one block, and closure byte totals add up. New vectors are assembled with the same oracle and reviewed before they are pinned.
+
 ## Selected wire/model profile
 
 - [`dasl-testing/`](dasl-testing/): Unmodified MIT-licensed fixtures at revision `b6ea320b07b385c417aaae265425ec334a3fd70c`; 105 rows across eleven families. Upstream profiles can disagree for the same bytes; preserve license/attribution.
@@ -19,7 +21,7 @@ Profile boundaries:
 
 ## Native demo DATA oracle
 
-[`format/demo_scenario.json`](format/demo_scenario.json) is independent preferred-CBOR/hashlib/base32 five-boundary DATA for the fixed native unit-world recipe and template agent/world IDs. [`generate_demo_scenario.py`](generate_demo_scenario.py) reproduces it read-only (`--check`); it reuses the independent lifecycle algorithm with newly authored distinct native grants/positions/terminal costs, never accepted-storage bytes or migration. The unchanged lifecycle corpus still reproduces byte-for-byte. Actual current/MSRV WASM runner tests compare complete input/Memory/Boundary/Episode/State bytes and roots, but the fixture itself is not executor provenance, host approval, wake/market semantics or availability proof. The fixed native reply recipe is checked against these transition bytes; unsupported-root patches remain raw bounded model DATA, not remapped notes.
+[`format/demo_scenario.json`](format/demo_scenario.json) is independent preferred-CBOR/hashlib/base32 five-boundary DATA for the fixed native unit-world recipe and template agent/world IDs. The host scenario recipe reproduces it, and the fixture test keeps it self-consistent.
 
 ## Standalone records and identities
 
@@ -27,7 +29,7 @@ All 38 complete standalone vectors match the independent Ciborium oracle. `$byte
 
 - [`format/memory.json`](format/memory.json): Empty/populated first-standard sparse `intents`/`strategy`/`tactics` records, including an empty object in an array position; independently assembled preferred CBOR with Python hashlib/base64 hashes/CIDs. Empty enabled Memory is `{}`; persisted nulls/empty object fields reject.
 - [`format/limits.json`](format/limits.json): Complete demo/full-u64 policy subrecords; normative scalar assembly and Python hashlib byte digests. Limits is not another block kind or authority.
-- [`format/definition.json`](format/definition.json): Synthetic veto/survivor Definitions with complete descriptors/profiles/Limits. Initial draft bytes came from the independent serde DAG-CBOR encoder. Current first-standard memory/profile/tool schema/policy and max_patch_entries vectors were independently rebuilt with preferred CBOR/Python hashlib/base64; tests verify them with Ciborium, not that removed dependency. Organic descriptor/policy metadata explicitly separates the closed intended vocabulary from tolerant root selection. [`generate_profiles.py`](generate_profiles.py) reproduces this metadata and its dependent synthetic links/closure totals (`--check` compares all current documents), reusing the independent preferred-CBOR encoder rather than Raiv. Reference Definitions contain only Continue/Yield tools, with no no_op descriptor; lifecycle terminal steps use tool_id=null to represent a complete zero-call reply. Tool/policy changes legitimately alter synthetic Definition/dependent CIDs without changing wire versions or hash domains; it has no accepted-checkpoint/recovery input or migration path.
+- [`format/definition.json`](format/definition.json): Synthetic veto/survivor Definitions with complete descriptors/profiles/Limits. Initial draft bytes came from the independent serde DAG-CBOR encoder. Current first-standard memory/profile/tool schema/policy and max_patch_entries vectors were independently rebuilt with preferred CBOR/Python hashlib/base64; tests verify them with Ciborium, not that removed dependency. Organic descriptor/policy metadata explicitly separates the closed intended vocabulary from tolerant root selection. The fixture test keeps this metadata and its dependent links and closure totals self-consistent. Reference Definitions contain only Continue/Yield tools, with no no_op descriptor; lifecycle terminal steps use tool_id=null to represent a complete zero-call reply. Tool/policy changes legitimately alter synthetic Definition/dependent CIDs without changing wire versions or hash domains; it has no accepted-checkpoint/recovery input or migration path.
 - [`format/command.json`](format/command.json): Complete embedded Commands, full-u64 tool versions and plain record hashes from independent canonical assembly.
 - [`format/identity.json`](format/identity.json): Exact Episode/Action/Command domain preimages/digests, including zero/u64::MAX action indexes. Historical independent codec preimages and Python hashlib pin the expected hashes; a plain Command hash is not its domain-bound digest.
 - [`format/terminal.json`](format/terminal.json): Positions/Receipts with null/raw references, full-u64 positions and all three terminal outcomes; normative scalar assembly and Python hashlib byte/command-domain hashes. Not provenance/finality proof.
@@ -46,7 +48,7 @@ All 38 complete standalone vectors match the independent Ciborium oracle. `$byte
 
 Ciborium-mutated graph regressions cover roles, IDs, ordinal/cause/terminal Receipt pairing, profile/retained-memory joins, history/revision windows, Usage, grants and declared Yield descriptors. They preserve nullable costs, legitimate Memory reuse and raw caller history capacity (including zero), and never invent evicted-prefix/genesis anchors, grant freshness/top-ups/units or code/argument authorization. Six `RestoredAgent` positive snapshots span genesis and post-genesis memory/none data; the memory-profile case corrects the old role fixture's authority in a separate test-built graph rather than rewriting its negative vector. Missing/corrupt-block, typed-view/buffer-pointer, caller-cap and no-hydration/fallback regressions exercise composition.
 
-- [`format/lifecycle.json`](format/lifecycle.json): Six independently generated checkpoint witness sets for object-patch → trade failure → retry success → set_wake → Finish → two ActorWakes. They pin exact Input/Memory/Boundary/Episode/root bytes/CIDs and required-closure sets/totals, plus transient patch-result values/canonical bytes/SHA-256. Mixed unsupported roots, an all-skipped patch and a processed no-effect patch demonstrate feedback without forced correction, alias mapping or implicit Finish; report hashes are DATA, not new structural blocks. [`generate_lifecycle.py`](generate_lifecycle.py) uses a narrow preferred-CBOR encoder and Python hashlib/base32, reads current synthetic templates, imports no Raiv code, writes no files and emits deterministic JSON on stdout. Reproduce with `python fixtures/generate_lifecycle.py` and compare stdout with this vector; no migration or legacy corpus is involved. These are checkpoint DATA witnesses, not host acceptance or actual effects.
+- [`format/lifecycle.json`](format/lifecycle.json): Six independently generated checkpoint witness sets for object-patch → trade failure → retry success → set_wake → Finish → two ActorWakes. They pin exact Input/Memory/Boundary/Episode/root bytes/CIDs and required-closure sets/totals, plus transient patch-result values/canonical bytes/SHA-256. Mixed unsupported roots, an all-skipped patch and a processed no-effect patch demonstrate feedback without forced correction, alias mapping or implicit Finish; report hashes are DATA, not new structural blocks. They were generated with a narrow preferred-CBOR encoder and Python hashlib/base32 that imported no Raiv code; no migration or legacy corpus is involved. These are checkpoint DATA witnesses, not host acceptance or actual effects.
 
 ## Independent oracle and focused checks
 
@@ -55,9 +57,7 @@ Ciborium-mutated graph regressions cover roles, IDs, ordinal/cause/terminal Rece
 Run the whole suite with `cargo test --locked`. Focused routes:
 
 ```sh
-python3 fixtures/generate_profiles.py --check
-python3 fixtures/generate_lifecycle.py > /tmp/raiv-lifecycle.json
-cmp fixtures/format/lifecycle.json /tmp/raiv-lifecycle.json
+cargo test --locked fixture_tests
 cargo test --locked pinned_raiv_profile_runs_all_125_rows
 cargo test --locked format::oracle::tests
 cargo test --locked format::codec::tests

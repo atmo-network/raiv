@@ -1,10 +1,13 @@
 //! Private canonical CBOR transport; state records remain opaque exact DRISL bytes.
+
 use alloc::vec::Vec;
 use minicbor::{encode::Write, Decoder, Encoder};
 use raiv::format::{validate_drisl, DecodeLimits};
 
 pub const MAX_FRAME_BYTES: usize = 8_388_608;
+
 const MAX_ENTRIES: u64 = 65_536;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AbiError {
     InvalidFrame,
@@ -21,8 +24,13 @@ pub enum AbiError {
     WrongRequest,
     InferenceFailure,
     RunFailure,
+    /// Specification error categories, so hosts can explain a failed activation.
+    CorrectiveTurnsExhausted,
+    BudgetExhausted,
+    ContextLimit,
     CandidateFailure,
 }
+
 impl AbiError {
     pub fn code(self) -> &'static str {
         match self {
@@ -40,13 +48,19 @@ impl AbiError {
             Self::WrongRequest => "wrong_inference_request",
             Self::InferenceFailure => "inference_failed",
             Self::RunFailure => "activation_failed",
+            Self::CorrectiveTurnsExhausted => "corrective_turns_exhausted",
+            Self::BudgetExhausted => "budget_exhausted",
+            Self::ContextLimit => "context_limit",
             Self::CandidateFailure => "candidate_failed",
         }
     }
 }
+
 struct Writer(Vec<u8>);
+
 impl Write for Writer {
     type Error = AbiError;
+
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), Self::Error> {
         let end = self
             .0
@@ -63,6 +77,7 @@ impl Write for Writer {
         Ok(())
     }
 }
+
 fn preflight(bytes: &[u8]) -> Result<(), AbiError> {
     validate_drisl(
         bytes,
@@ -101,11 +116,13 @@ fn preflight(bytes: &[u8]) -> Result<(), AbiError> {
     }
     Ok(())
 }
+
 pub struct Initialize<'a> {
     pub agent_id: [u8; 32],
     pub definition: &'a [u8],
     pub memory: Option<&'a [u8]>,
 }
+
 fn envelope(bytes: &[u8]) -> Result<(&str, &[u8]), AbiError> {
     preflight(bytes)?;
     let mut decoder = Decoder::new(bytes);
@@ -135,6 +152,7 @@ fn envelope(bytes: &[u8]) -> Result<(&str, &[u8]), AbiError> {
         payload.ok_or(AbiError::InvalidFrame)?,
     ))
 }
+
 fn initialize(payload: &[u8]) -> Result<Initialize<'_>, AbiError> {
     let mut decoder = Decoder::new(payload);
     if decoder.map().map_err(|_| AbiError::InvalidFrame)? != Some(3) {
@@ -174,17 +192,20 @@ fn initialize(payload: &[u8]) -> Result<Initialize<'_>, AbiError> {
         memory: memory.ok_or(AbiError::InvalidFrame)?,
     })
 }
+
 pub enum Input<'a> {
     Initialize(Initialize<'a>),
     Activate(Activate<'a>),
     InferenceError { request_id: u64 },
     InferenceReply { request_id: u64, reply: &'a [u8] },
 }
+
 pub struct Activate<'a> {
     pub root: raiv::format::DaslCid,
     pub input: &'a [u8],
     pub blocks: Vec<(raiv::format::DaslCid, &'a [u8])>,
 }
+
 impl raiv::graph::MaterializedBlocks for Activate<'_> {
     fn get(&self, cid: raiv::format::DaslCid) -> Option<&[u8]> {
         self.blocks
@@ -193,6 +214,7 @@ impl raiv::graph::MaterializedBlocks for Activate<'_> {
             .map(|(_, body)| *body)
     }
 }
+
 pub fn decode(bytes: &[u8]) -> Result<Input<'_>, AbiError> {
     let (kind, payload) = envelope(bytes)?;
     match kind {
@@ -250,6 +272,7 @@ pub fn decode(bytes: &[u8]) -> Result<Input<'_>, AbiError> {
         _ => Err(AbiError::UnsupportedOperation),
     }
 }
+
 fn activate(payload: &[u8]) -> Result<Activate<'_>, AbiError> {
     use raiv::format::{DaslCid, DaslCodec};
     let limits = raiv::limits::Limits::default();
@@ -337,6 +360,7 @@ fn activate(payload: &[u8]) -> Result<Activate<'_>, AbiError> {
         blocks: blocks.ok_or(AbiError::InvalidFrame)?,
     })
 }
+
 pub fn infer(request: raiv::activation::ModelRequest<'_>) -> Result<Vec<u8>, AbiError> {
     let limits = request
         .limits()
@@ -401,6 +425,7 @@ pub fn infer(request: raiv::activation::ModelRequest<'_>) -> Result<Vec<u8>, Abi
     preflight(&output)?;
     Ok(output)
 }
+
 pub fn boundary(candidate: &raiv::commit::CommitCandidate) -> Result<Vec<u8>, AbiError> {
     let binding = candidate.binding();
     let mut e = Encoder::new(Writer(Vec::new()));
@@ -455,6 +480,7 @@ pub fn boundary(candidate: &raiv::commit::CommitCandidate) -> Result<Vec<u8>, Ab
     preflight(&output)?;
     Ok(output)
 }
+
 pub fn initialized(genesis: &raiv::graph::Genesis) -> Result<Vec<u8>, AbiError> {
     let mut e = Encoder::new(Writer(Vec::new()));
     let result = (|| -> Result<(), minicbor::encode::Error<AbiError>> {
@@ -480,6 +506,7 @@ pub fn initialized(genesis: &raiv::graph::Genesis) -> Result<Vec<u8>, AbiError> 
     result.map_err(|_| AbiError::Allocation)?;
     Ok(e.into_writer().0)
 }
+
 pub fn error(error: AbiError) -> Result<Vec<u8>, AbiError> {
     let mut e = Encoder::new(Writer(Vec::new()));
     e.map(3)

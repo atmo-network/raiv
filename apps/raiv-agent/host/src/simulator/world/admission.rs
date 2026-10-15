@@ -1,17 +1,21 @@
 //! Local scripted-ledger Receipt approval, not authenticated external Actor/executor,
 //! durable input reservation, lost-attempt accounting or world/Core-loss reconciliation.
+
 use super::*;
 use crate::admission::{AdmissionError, AdmittedInput};
 use raiv::{budget::BudgetAdmission, input::ActivationInput};
+
 /// Input/observation/event and this exact grant are separately native approved. A caller
 /// cannot choose the approved Receipt: it comes ONLY from the session's terminal ledger.
 pub struct LedgerActionResult {
     pub input: ActivationInput,
     pub approved_grant: BudgetAdmission,
 }
+
 fn error(e: AdmissionError) -> WorldError {
     WorldError::Simulator(SimulatorError::Admission(e))
 }
+
 impl ScriptedWorld<'_> {
     /// Whole pending binding/Receipt/caller/input/grant/replay/capacity preflight and
     /// bounded native staging BEFORE exact primary + current main/closure fsync.

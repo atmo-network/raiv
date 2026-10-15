@@ -22,6 +22,7 @@ pub enum ProjectionError {
     ReceiptMismatch,
     TrajectoryNotList,
 }
+
 impl From<CodecError> for ProjectionError {
     fn from(error: CodecError) -> Self {
         match error {
@@ -30,6 +31,7 @@ impl From<CodecError> for ProjectionError {
         }
     }
 }
+
 impl fmt::Display for ProjectionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -42,6 +44,7 @@ impl fmt::Display for ProjectionError {
         }
     }
 }
+
 impl core::error::Error for ProjectionError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
@@ -120,6 +123,7 @@ fn container(count: u64, depth: u64, bounds: &DecodeLimits) -> Result<(), CodecE
     }
     Ok(())
 }
+
 pub(super) fn map(
     writer: &mut RecordEncoder,
     count: u64,
@@ -129,6 +133,7 @@ pub(super) fn map(
     container(count, depth, bounds)?;
     writer.map(count)
 }
+
 pub(super) fn list(
     writer: &mut RecordEncoder,
     count: u64,
@@ -138,6 +143,7 @@ pub(super) fn list(
     container(count, depth, bounds)?;
     writer.list(count)
 }
+
 pub(super) fn model(
     writer: &mut RecordEncoder,
     bytes: &[u8],
@@ -151,6 +157,7 @@ pub(super) fn model(
     validate_model_value(bytes, &nested)?;
     writer.encoded(bytes)
 }
+
 pub(super) fn memory(
     writer: &mut RecordEncoder,
     value: Option<&Memory>,
@@ -163,11 +170,13 @@ pub(super) fn memory(
         writer.null()
     }
 }
+
 pub(super) fn id(writer: &mut RecordEncoder, value: Id32) -> Result<(), CodecError> {
     let mut text = [0u8; 64];
     data_encoding::HEXLOWER.encode_mut(&value, &mut text);
     writer.text(core::str::from_utf8(&text).expect("hex encoder emits ASCII"))
 }
+
 pub(super) fn number(writer: &mut RecordEncoder, value: u64) -> Result<(), CodecError> {
     struct Decimal {
         bytes: [u8; 20],
@@ -194,6 +203,7 @@ pub(super) fn number(writer: &mut RecordEncoder, value: u64) -> Result<(), Codec
         core::str::from_utf8(&output.bytes[..output.len]).expect("integer formatter emits ASCII"),
     )
 }
+
 pub(super) fn position(
     writer: &mut RecordEncoder,
     value: Position,
@@ -213,6 +223,7 @@ pub(super) fn position(
     }
     Ok(())
 }
+
 pub(super) fn receipt(
     writer: &mut RecordEncoder,
     value: ReceiptView<'_>,
@@ -240,6 +251,7 @@ pub(super) fn receipt(
     }
     Ok(())
 }
+
 fn command(
     writer: &mut RecordEncoder,
     value: CommandView<'_>,
@@ -266,6 +278,7 @@ fn command(
     id(writer, value.authority_binding())?;
     Ok(())
 }
+
 fn encode_episode(
     writer: &mut RecordEncoder,
     value: EpisodeProjection<'_>,

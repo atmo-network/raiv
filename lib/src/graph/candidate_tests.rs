@@ -9,12 +9,15 @@ use crate::{
     tools::{PlanningContext, ToolFailure, ToolImplementation, ToolSet},
 };
 use serde_json::json;
+
 pub(super) fn validate(_: &[u8]) -> Result<(), ToolFailure> {
     Ok(())
 }
+
 pub(super) fn plan(ctx: PlanningContext<'_>, args: &[u8]) -> Result<ModelValue, ToolFailure> {
     ModelValue::decode(args, &ctx.limits.decode_limits()).map_err(|_| ToolFailure::PlanningFailed)
 }
+
 pub(super) fn incoming(snapshot: &RestoredAgent, event: u8) -> Cbor {
     let mut source = activation::incoming(snapshot);
     map_mut(&mut source).insert("event_id".into(), Cbor::Bytes(vec![event; 32]));
@@ -28,6 +31,7 @@ pub(super) fn incoming(snapshot: &RestoredAgent, event: u8) -> Cbor {
     }
     source
 }
+
 pub(super) fn advance(run: &mut Activation<'_>, tool: &str, args: Cbor) -> RamProgress {
     let key = run.request().unwrap().binding();
     let mut call = reply::call("RAM_ONLY_NATIVE_ID", args);
@@ -36,12 +40,14 @@ pub(super) fn advance(run: &mut Activation<'_>, tool: &str, args: Cbor) -> RamPr
     map_mut(&mut frame).insert("text".into(), Cbor::Text("RAM_ONLY_REPLY_TEXT".into()));
     run.advance_ram(key, &encode(&frame)).unwrap()
 }
+
 pub(super) fn finish(run: &mut Activation<'_>) -> RamProgress {
     let key = run.request().unwrap().binding();
     let mut frame = reply::frame(key.request_id, vec![]);
     map_mut(&mut frame).insert("text".into(), Cbor::Text("RAM_ONLY_REPLY_TEXT".into()));
     run.advance_ram(key, &encode(&frame)).unwrap()
 }
+
 pub(super) fn verify(
     run: &Activation<'_>,
     candidate: &CommitCandidate,
@@ -261,6 +267,7 @@ pub(super) fn verify(
         *next
     );
 }
+
 #[test]
 fn finish_and_yield_candidates_for_every_positive_snapshot_match_independent_records_and_restore() {
     let mut snapshots = restored::valid_snapshots();
@@ -324,6 +331,7 @@ fn finish_and_yield_candidates_for_every_positive_snapshot_match_independent_rec
         }
     }
 }
+
 #[test]
 fn patched_memory_is_materialized_and_unchanged_memory_is_reused_without_persisting_ram_turns() {
     for no_effect in [false, true] {
@@ -375,6 +383,7 @@ fn patched_memory_is_materialized_and_unchanged_memory_is_reused_without_persist
         assert!(candidate.snapshot().history().last().unwrap().closed());
     }
 }
+
 #[test]
 fn candidate_materialized_byte_cap_is_checked_for_the_whole_new_closure() {
     let fixture = &fixtures()[0];

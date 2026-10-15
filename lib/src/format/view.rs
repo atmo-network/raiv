@@ -114,6 +114,7 @@ impl MapView<'_> {
 
 impl<'a> Iterator for MapView<'a> {
     type Item = Result<(&'a str, ValueView<'a>), CodecError>;
+
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining == 0 {
             return None;
@@ -156,6 +157,7 @@ impl ListView<'_> {
 
 impl<'a> Iterator for ListView<'a> {
     type Item = Result<ValueView<'a>, CodecError>;
+
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining == 0 {
             return None;

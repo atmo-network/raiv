@@ -30,6 +30,7 @@ pub(super) fn memory_profile_snapshot() -> (Store, DaslCid) {
     });
     (blocks, root)
 }
+
 pub(super) fn valid_snapshots() -> Vec<(Store, DaslCid)> {
     let base = roles();
     let identity = identity_graphs();
