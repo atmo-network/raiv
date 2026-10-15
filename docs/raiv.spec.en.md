@@ -2,7 +2,9 @@
 
 ## Specification of the portable Rust library and isolated WebAssembly reference agent
 
-**Date:** 15 October 2026. **Revision:** 0.0.2 — provider profiles, readable Memory and pinned local sessions on the isolated WASM reference application; 0.0.1 (12 October 2026) was the first release. **Status:** normative implementation specification, not an implementation report; progress and evidence live in the changelog and backlog.
+**Date:** 15 October 2026.
+**Revision:** 0.0.2 — provider profiles, readable Memory and pinned local sessions on the isolated WASM reference application; 0.0.1 (12 October 2026) was the first release.
+**Status:** normative implementation specification, not an implementation report; progress and evidence live in the changelog and backlog.
 **Pronunciation:** /reɪv/, like *rave*.
 **Components:** `raiv` — portable library; `raiv-agent` — native host + isolated guest; `raiv-agent.wasm` — compiled agent logic.
 **State format:** `raiv-state/1`, DASL CID + DRISL; CAR is host-side transport.
